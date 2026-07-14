@@ -34,6 +34,8 @@ const EffectsLibraryPanel = lazy(() => import('../components/effects/EffectsLibr
 const TransitionLibrary = lazy(() => import('../components/transitions/TransitionLibrary').then(m => ({ default: m.TransitionLibrary })));
 const AIAssistantPanel = lazy(() => import('../components/ai/AIAssistantPanel').then(m => ({ default: m.AIAssistantPanel })));
 const AssetLibraryPanel = lazy(() => import('../components/assets/AssetLibraryPanel').then(m => ({ default: m.AssetLibraryPanel })));
+const SettingsModal = lazy(() => import('../components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })));
+const TutorialOverlay = lazy(() => import('../components/tutorial/TutorialOverlay').then(m => ({ default: m.TutorialOverlay })));
 
 const LazyFallback = () => <div className="p-4 text-xs text-foreground/40 animate-pulse">Loading module...</div>;
 
@@ -45,6 +47,8 @@ export function EditorLayout() {
   const [showRecorder, setShowRecorder] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('corem_tutorial_seen'));
   const { isMarketplaceOpen, isPluginManagerOpen, toggleMarketplace, togglePluginManager } = usePluginStore();
   const { saveProject, isSaving, savedPath } = useSaveProject(projectId || 'untitled');
 
@@ -101,6 +105,20 @@ export function EditorLayout() {
           >
             <Save size={13} />
             <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Save'}</span>
+          </button>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-1.5 hover:bg-surface-hover rounded-md text-foreground/70 hover:text-foreground transition-colors"
+            title="Settings (Dark Theme & more)"
+          >
+            <Settings size={16} />
+          </button>
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="p-1.5 hover:bg-surface-hover rounded-md text-foreground/70 hover:text-foreground transition-colors"
+            title="Help / Tutorial"
+          >
+            <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px] font-bold">?</div>
           </button>
           <button
             onClick={() => setShowRecorder(true)}
@@ -260,24 +278,14 @@ export function EditorLayout() {
         <RenderQueuePanel />
         <ExportDialog 
           isOpen={showExport} 
-          onClose={() => setShowExport(false)} 
-          sequenceId={activeSequenceId || 'default-seq'} 
-        />
         {isMarketplaceOpen && <PluginMarketplace onClose={() => toggleMarketplace()} />}
         {isPluginManagerOpen && <PluginManager onClose={() => togglePluginManager()} />}
+        {showExport && <ExportDialog isOpen={showExport} onClose={() => setShowExport(false)} sequenceId={activeSequenceId!} />}
+        {showShare && <ShareModal isOpen={showShare} onClose={() => setShowShare(false)} projectId={projectId!} />}
+        {showRecorder && <VoiceRecorderDialog isOpen={showRecorder} onClose={() => setShowRecorder(false)} />}
+        {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+        {showTutorial && <TutorialOverlay onClose={() => { setShowTutorial(false); localStorage.setItem('corem_tutorial_seen', 'true'); }} />}
       </Suspense>
-
-      <VoiceRecorderDialog 
-        isOpen={showRecorder}
-        onClose={() => setShowRecorder(false)}
-        onSave={(blob) => {
-          console.log("Recorded Audio Blob:", blob);
-        }}
-      />
-
-      {showShare && projectId && (
-        <ShareModal projectId={projectId} onClose={() => setShowShare(false)} />
-      )}
 
       <ProxyPromptModal />
     </div>

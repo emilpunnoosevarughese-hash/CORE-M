@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, Pause, Maximize, SkipBack, SkipForward, Volume2, Settings, Minimize } from 'lucide-react';
+import { Play, Pause, Maximize, SkipBack, SkipForward, Volume2, Settings, Minimize, VideoOff } from 'lucide-react';
 import { usePlaybackStore } from '@corem/playback';
 import { useTimelineStore } from '@corem/timeline';
 import { Interpolator } from '@corem/animation';
@@ -23,6 +23,7 @@ export function PreviewWindow() {
   const [volume, setVolume] = useState(1);
   const [timecode, setTimecode] = useState('00:00:00:00');
   const [isLoading, setIsLoading] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(true);
   const [qualityScale, setQualityScale] = useState(1);
   const qualityRef = useRef(1);
   useEffect(() => { qualityRef.current = qualityScale; }, [qualityScale]);
@@ -278,6 +279,7 @@ export function PreviewWindow() {
         
         Promise.all(fetchFramePromises).then(resolvedLayers => {
            setIsLoading(anyLoading);
+           setIsEmpty(resolvedLayers.length === 0);
            if (workerRef.current) {
              workerRef.current.postMessage({
                type: 'RENDER',
@@ -388,6 +390,16 @@ export function PreviewWindow() {
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
               <span className="text-xs font-medium text-white tracking-widest uppercase">Buffering</span>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State Overlay */}
+        {isEmpty && !isLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+            <div className="flex flex-col items-center gap-3 text-white/30">
+              <VideoOff size={48} className="opacity-50" />
+              <span className="text-sm font-medium tracking-widest uppercase">No Video at this Frame</span>
             </div>
           </div>
         )}
