@@ -42,6 +42,8 @@ export const usePlaybackStore = create<PlaybackState>((set, get) => ({
       get().play();
     } else {
       get().pause();
+    }
+  },
   play: () => {
     if (get().isPlaying) return;
     set({ isPlaying: true });

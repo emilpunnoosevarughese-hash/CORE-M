@@ -304,7 +304,10 @@ export function PreviewWindow() {
           ctx.fillText(`Frame: ${Math.floor(frame)}`, 20, 40);
         }
       }
-    });
+    };
+    
+    rafId = requestAnimationFrame(renderLoop);
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   const activeSequenceId = useTimelineStore(s => s.activeSequenceId);
