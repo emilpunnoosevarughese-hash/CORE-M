@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAIStore, getAllProviders } from '@corem/ai';
 import { X, CheckCircle, AlertTriangle, Loader2, Key, Globe, Info } from 'lucide-react';
 
@@ -66,8 +67,8 @@ export function AISettingsModal({ onClose }: Props) {
     Local: providers.filter(p => p.isLocal),
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="bg-surface border border-border rounded-2xl w-full max-w-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
 
         {/* Header */}
@@ -248,6 +249,7 @@ export function AISettingsModal({ onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
