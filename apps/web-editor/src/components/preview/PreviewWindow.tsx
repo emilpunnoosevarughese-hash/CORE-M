@@ -227,17 +227,8 @@ export function PreviewWindow() {
              }
              
              if (video.readyState >= 2 && !video.seeking) {
-               const cacheKey = `frame-${layer.assetId}-${Math.floor(videoTime * 30)}`;
-               // Try fetching from cache first
-               const { CacheManager } = await import('@corem/playback');
-               const cachedBitmap = CacheManager.get<ImageBitmap>(cacheKey);
-               if (cachedBitmap) {
-                  return { ...layer, source: cachedBitmap };
-               }
-               
                try {
                   const bitmap = await createImageBitmap(video);
-                  CacheManager.set(cacheKey, bitmap);
                   return { ...layer, source: bitmap };
                } catch(e) {
                   // Fallback for browsers/scenarios where createImageBitmap(video) fails
@@ -248,7 +239,6 @@ export function PreviewWindow() {
                     const ctx = tempCanvas.getContext('2d');
                     if (ctx) ctx.drawImage(video, 0, 0);
                     const bitmap = await createImageBitmap(tempCanvas);
-                    CacheManager.set(cacheKey, bitmap);
                     return { ...layer, source: bitmap };
                   } catch(e2) {
                     console.warn("createImageBitmap fallback failed", e2);
