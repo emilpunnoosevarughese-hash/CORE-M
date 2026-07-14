@@ -1,0 +1,11 @@
+{
+  "id": "hello-world",
+  "name": "Hello World Extension",
+  "version": "1.0.0",
+  "author": "coreM Team",
+  "description": "A sample plugin demonstrating the coreM Plugin SDK capabilities.",
+  "category": "developer-tool",
+  "supportedCoreMVersion": ">=1.0.0",
+  "permissions": ["ui:notifications", "timeline:read"],
+  "entry": "index.js"
+}

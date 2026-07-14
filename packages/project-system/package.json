@@ -1,0 +1,9 @@
+{
+  "name": "@corem/project-system",
+  "version": "1.0.0",
+  "description": "Professional project management, asset database, version control, and autosave for CORE M",
+  "main": "src/index.ts",
+  "dependencies": {
+    "msgpackr": "^1.10.1"
+  }
+}

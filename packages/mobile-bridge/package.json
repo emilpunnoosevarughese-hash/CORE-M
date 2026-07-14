@@ -1,0 +1,7 @@
+{
+  "name": "@corem/mobile-bridge",
+  "version": "1.0.0",
+  "description": "Professional cross-platform mobile companion and remote control bridge for CORE M",
+  "main": "src/index.ts",
+  "dependencies": {}
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@corem/collaboration",
+  "version": "1.0.0",
+  "description": "Professional real-time collaboration and cloud synchronization system for CORE M",
+  "main": "src/index.ts",
+  "dependencies": {
+    "msgpackr": "^1.10.1"
+  }
+}

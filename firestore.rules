@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      
+      match /notifications/{notificationId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    match /projects/{projectId} {
+      // Allow read if user is owner (in real app, we'd check members array)
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      
+      // Allow create if user sets themselves as owner
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      
+      // Allow update/delete if owner
+      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn(); // In real app, only if user can read project
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      }
+
+      match /versions/{versionId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+      }
+    }
+
+    match /workspaces/{workspaceId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /shareLinks/{linkId} {
+      allow read: if true; // Public links can be read by anyone to resolve
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
+    }
+  }
+}

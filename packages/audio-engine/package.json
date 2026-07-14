@@ -1,0 +1,10 @@
+{
+  "name": "@corem/audio-engine",
+  "version": "1.0.0",
+  "description": "Professional non-linear audio engine, mixer, and sound design system for CORE M",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@corem/animation": "workspace:*",
+    "@corem/timeline": "workspace:*"
+  }
+}
