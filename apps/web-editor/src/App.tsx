@@ -1,6 +1,47 @@
-import React, { useEffect, useState, Suspense, lazy } from 'react';
+import React, { useEffect, useState, Suspense, lazy, Component, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { usePerformanceStore } from './store/performanceStore';
+
+// Global Error Boundary to catch any runtime crash and show a useful message
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ 
+          background: '#0a0a0a', color: '#fff', height: '100vh', 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', 
+          justifyContent: 'center', fontFamily: 'monospace', padding: '2rem', textAlign: 'center'
+        }}>
+          <h1 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#ff4444' }}>⚠ CORE M Error</h1>
+          <p style={{ color: '#888', marginBottom: '1rem' }}>Something crashed. Check the console for details.</p>
+          <pre style={{ 
+            background: '#1a1a1a', padding: '1rem', borderRadius: '8px', 
+            maxWidth: '80vw', overflow: 'auto', fontSize: '0.75rem', color: '#ff8888'
+          }}>
+            {this.state.error.message}
+          </pre>
+          <button 
+            onClick={() => window.location.href = '/'}
+            style={{ 
+              marginTop: '1.5rem', padding: '0.75rem 2rem', background: '#7c3aed',
+              color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem'
+            }}
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Lazy loaded routes
 const EditorLayout = lazy(() => import('./layouts/EditorLayout').then(m => ({ default: m.EditorLayout })));
@@ -38,23 +79,25 @@ function App() {
   }, []);
 
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      {showDiagnostics && (
-        <Suspense fallback={null}>
-          <DiagnosticsPanel />
-        </Suspense>
-      )}
-      <Router>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/dashboard/*" element={<DashboardLayout />} />
-          <Route path="/editor/:projectId" element={<EditorLayout />} />
-          <Route path="/editor/:projectId/color" element={<ColorWorkspace />} />
-          <Route path="*" element={<div className="h-screen w-screen flex items-center justify-center">404 - Not Found</div>} />
-        </Routes>
-      </Router>
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingFallback />}>
+        {showDiagnostics && (
+          <Suspense fallback={null}>
+            <DiagnosticsPanel />
+          </Suspense>
+        )}
+        <Router>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/dashboard/*" element={<DashboardLayout />} />
+            <Route path="/editor/:projectId" element={<EditorLayout />} />
+            <Route path="/editor/:projectId/color" element={<ColorWorkspace />} />
+            <Route path="*" element={<div className="h-screen w-screen flex items-center justify-center">404 - Not Found</div>} />
+          </Routes>
+        </Router>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
