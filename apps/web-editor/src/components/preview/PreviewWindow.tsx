@@ -25,9 +25,9 @@ export function PreviewWindow() {
   const [isLoading, setIsLoading] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isError, setIsError] = useState(false);
-  const [qualityScale, setQualityScale] = useState(1);
-  const qualityRef = useRef(1);
-  useEffect(() => { qualityRef.current = qualityScale; }, [qualityScale]);
+  const [previewQuality, setPreviewQuality] = useState('auto');
+  const qualityRef = useRef('auto');
+  useEffect(() => { qualityRef.current = previewQuality; }, [previewQuality]);
 
   const { isPlaying, togglePlay } = usePlaybackStore();
   const { playhead } = useTimelineStore();
@@ -325,8 +325,23 @@ export function PreviewWindow() {
       let h = width / aspect;
       if (h > height) { h = height; w = height * aspect; }
       
-      const renderW = Math.round(w * qualityScale);
-      const renderH = Math.round(h * qualityScale);
+      let renderW = Math.round(w);
+      let renderH = Math.round(h);
+      
+      if (previewQuality !== 'auto') {
+        const targetH = parseInt(previewQuality, 10);
+        if (targetH && !isNaN(targetH)) {
+           // Cap at project resolution
+           const maxH = Math.min(targetH, projH);
+           renderH = maxH;
+           renderW = Math.round(maxH * aspect);
+        }
+      } else {
+        // Auto scale to CSS pixel size with device pixel ratio
+        const dpr = window.devicePixelRatio || 1;
+        renderW = Math.round(w * dpr);
+        renderH = Math.round(h * dpr);
+      }
       
       if (workerRef.current) {
         workerRef.current.postMessage({
@@ -351,14 +366,14 @@ export function PreviewWindow() {
     });
     if (containerRef.current) observer.observe(containerRef.current);
     
-    // Also force an update when qualityScale changes if we already have dimensions
+    // Also force an update when previewQuality changes if we already have dimensions
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       if (rect.width > 0) updateSize(rect.width, rect.height);
     }
     
     return () => observer.disconnect();
-  }, [qualityScale, activeSequence?.width, activeSequence?.height]);
+  }, [previewQuality, activeSequence?.width, activeSequence?.height]);
 
   const toggleFullscreen = useCallback(() => {
     if (!fullscreen) {
@@ -375,7 +390,7 @@ export function PreviewWindow() {
       {/* Canvas container — fills available space */}
       <div
         ref={containerRef}
-        className="flex-1 flex items-center justify-center overflow-hidden bg-[#0a0a0a] relative min-h-0"
+        className="flex-1 flex items-center justify-center overflow-hidden bg-surface-hover/50 relative min-h-0 pattern-dots pattern-foreground/5 pattern-size-4"
       >
         {/* Video sources are now managed dynamically in the DOM by the sync loop */}
         <canvas
@@ -474,13 +489,16 @@ export function PreviewWindow() {
         {/* Right: quality + overlays + fullscreen */}
         <div className="flex items-center gap-2 min-w-0">
           <select 
-            value={qualityScale}
-            onChange={e => setQualityScale(Number(e.target.value))}
+            value={previewQuality}
+            onChange={e => setPreviewQuality(e.target.value)}
             className="bg-transparent text-[11px] text-foreground/60 outline-none border border-border/50 rounded px-1.5 py-0.5"
           >
-            <option value={1}>Full</option>
-            <option value={0.5}>1/2</option>
-            <option value={0.25}>1/4</option>
+            <option value="auto">Auto (Fit)</option>
+            <option value="360">360p</option>
+            <option value="480">480p</option>
+            <option value="720">720p</option>
+            <option value="1080">1080p</option>
+            <option value="2160">4K</option>
           </select>
           <button
             onClick={() => setShowSafeAreas(s => !s)}

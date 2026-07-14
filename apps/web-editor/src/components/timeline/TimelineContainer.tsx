@@ -85,6 +85,33 @@ export function TimelineContainer() {
       const availableTracks = Object.values(tracks).filter(t => t.type === targetType).sort((a, b) => a.index - b.index);
       const targetTrackId = availableTracks.length > 0 ? availableTracks[0].id : (isAudio ? 'a1' : 'v1');
 
+      // Aspect ratio mismatch check
+      if (targetType === 'video' && asset.resolution) {
+        const [wStr, hStr] = asset.resolution.split('x');
+        const aW = parseInt(wStr, 10);
+        const aH = parseInt(hStr, 10);
+        if (aW && aH && projW && projH) {
+          const assetAspect = aW / aH;
+          const projAspect = projW / projH;
+          
+          // If mismatch is greater than 10% (e.g. 16:9 vs 9:16 is a huge mismatch)
+          if (Math.abs(assetAspect - projAspect) > 0.1) {
+            const getRatioString = (ratio: number) => {
+               if (ratio > 1.7) return '16:9 (Landscape)';
+               if (ratio < 0.6) return '9:16 (Vertical)';
+               if (Math.abs(ratio - 1) < 0.1) return '1:1 (Square)';
+               return `${aW}x${aH}`;
+            };
+            const msg = `Notice: The dropped video (${getRatioString(assetAspect)}) does not match the project aspect ratio (${getRatioString(projAspect)}). You may see black bars or cropping.`;
+            // Avoid repeating the same alert too frequently
+            if (!(window as any).__lastAspectWarning || Date.now() - (window as any).__lastAspectWarning > 10000) {
+               alert(msg);
+               (window as any).__lastAspectWarning = Date.now();
+            }
+          }
+        }
+      }
+
       addClip({
         trackId: targetTrackId,
         assetId: assetId,

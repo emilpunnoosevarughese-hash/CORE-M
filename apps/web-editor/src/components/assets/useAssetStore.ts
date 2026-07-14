@@ -84,17 +84,40 @@ export const useAssetStore = create<AssetStore>()(
         const id  = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const ext = file.name.split('.').pop()?.toLowerCase() || '';
         const type: AssetType =
-          ['mp4','mov','webm','avi'].includes(ext)            ? 'video'  :
-          ['mp3','wav','aac','ogg','flac'].includes(ext)      ? 'music'  :
+          ['mp4','mov','webm','avi','mkv'].includes(ext)      ? 'video'  :
+          ['mp3','wav','m4a','aac','ogg','flac'].includes(ext)? 'music'  :
           ['png','jpg','jpeg','webp','avif','svg'].includes(ext) ? 'image' :
           ['gif'].includes(ext)                               ? 'gif'    : 'image';
 
         const url = URL.createObjectURL(file);
+        
+        // Extract metadata if possible
+        let duration = 0;
+        let resolution = '';
+        if (type === 'video' || type === 'music') {
+          try {
+            await new Promise<void>((resolve) => {
+              const media = type === 'video' ? document.createElement('video') : document.createElement('audio');
+              media.onloadedmetadata = () => {
+                duration = media.duration;
+                if (type === 'video') {
+                  resolution = `${(media as HTMLVideoElement).videoWidth}x${(media as HTMLVideoElement).videoHeight}`;
+                }
+                resolve();
+              };
+              media.onerror = () => resolve();
+              media.src = url;
+            });
+          } catch (e) {}
+        }
+
         const asset: Asset = {
           id, name: file.name, type, tags: ['local'],
           previewUrl: url,
           sourceUrl: url,
           size: file.size,
+          duration: duration || undefined,
+          resolution: resolution || undefined,
           isFavorite: false, isLocal: true, isDownloaded: true,
           addedAt: Date.now(),
         };
