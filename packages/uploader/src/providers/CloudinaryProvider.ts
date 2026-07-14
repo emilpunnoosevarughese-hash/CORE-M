@@ -1,7 +1,7 @@
 import type { StorageProvider, StorageCapabilities, UploadProgress, UploadResult } from './StorageProvider';
 
-const CLOUD_NAME = import.meta.env?.VITE_CLOUDINARY_CLOUD_NAME || 'demo';
-const UPLOAD_PRESET = import.meta.env?.VITE_CLOUDINARY_UPLOAD_PRESET || 'unsigned_preset';
+const CLOUD_NAME = import.meta.env?.VITE_CLOUDINARY_CLOUD_NAME || 'ahd5zxxg';
+const UPLOAD_PRESET = import.meta.env?.VITE_CLOUDINARY_UPLOAD_PRESET || 'corem_preset';
 
 export class CloudinaryProvider implements StorageProvider {
   name = 'cloudinary';
