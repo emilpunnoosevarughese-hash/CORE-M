@@ -4,7 +4,7 @@ import { EffectRegistry } from '@corem/effects';
 import { Settings2, Trash2, Power, GripVertical } from 'lucide-react';
 
 export function EffectInspector() {
-  const { selection, clips, updateClip } = useTimelineStore();
+  const { selection, clips, updateClip, deleteClip, setSelection } = useTimelineStore();
   
   if (selection.clipIds.length !== 1) {
     return (
@@ -17,6 +17,24 @@ export function EffectInspector() {
   const activeClipId = selection.clipIds[0];
   const clip = clips[activeClipId];
   const effects = clip?.effects || [];
+
+  const handleDeleteClip = () => {
+    deleteClip(activeClipId);
+    setSelection([]);
+  };
+
+  const renderClipHeader = () => (
+    <div className="flex items-center justify-between p-4 border-b border-border bg-surface-hover/50 shrink-0">
+      <div className="font-semibold text-sm truncate pr-4">{clip?.name || 'Selected Clip'}</div>
+      <button 
+        onClick={handleDeleteClip}
+        className="p-1.5 hover:bg-red-500/10 text-red-500 rounded transition-colors flex-shrink-0"
+        title="Delete Clip"
+      >
+        <Trash2 size={16} />
+      </button>
+    </div>
+  );
 
   const handleUpdateParam = (effectIndex: number, paramId: string, value: any) => {
     const newEffects = [...effects];
@@ -47,18 +65,20 @@ export function EffectInspector() {
 
   if (effects.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-foreground/50 text-sm p-6 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center border border-dashed border-border">
-          <Settings2 size={20} className="opacity-50" />
+      <div className="flex flex-col h-full">
+        {renderClipHeader()}
+        <div className="flex-1 flex flex-col items-center justify-center text-foreground/50 text-sm p-6 text-center space-y-4">
+          <Settings2 size={48} className="opacity-20" />
+          <p>No effects applied to this clip yet.</p>
+          <p className="text-xs">Drag and drop effects from the Effects Panel to add them.</p>
         </div>
-        <p>No effects applied to this clip.</p>
-        <p className="text-xs opacity-70">Drag and drop effects from the Effects Library.</p>
       </div>
     );
   }
 
   return (
     <div className="flex-1 overflow-y-auto space-y-px bg-background">
+      {renderClipHeader()}
       {effects.map((effectInst, idx) => {
         const def = EffectRegistry.getEffect(effectInst.effectId);
         if (!def) return null;

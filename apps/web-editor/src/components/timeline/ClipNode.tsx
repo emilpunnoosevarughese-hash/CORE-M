@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useTimelineStore, findSnapPoint } from '@corem/timeline';
 import type { Clip } from '@corem/timeline';
 import { WaveformCanvas } from '../audio/WaveformCanvas';
+import { ClipContextMenu } from './ClipContextMenu';
 
 interface ClipNodeProps {
   clip: Clip;
@@ -12,6 +13,7 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
   const { zoomScale, selection, setSelection, moveClip, trimClip, updateClip, clips, isSnappingEnabled, playhead, tracks } = useTimelineStore();
   const isSelected = selection.clipIds.includes(clip.id);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{x: number, y: number} | null>(null);
 
   const nodeRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
@@ -34,6 +36,7 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
 
   // Handle Body Drag
   const handleBodyPointerDown = (e: React.PointerEvent) => {
+    if (e.button === 2) return; // Ignore right click for drag
     e.stopPropagation();
     if (!isSelected) setSelection([clip.id]);
     
@@ -74,7 +77,7 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
       
       if (nodeRef.current) nodeRef.current.style.transform = `translateX(0px)`;
       if (Math.abs(deltaX) > 2) {
-        moveClip(clip.id, newStart);
+        moveClip(clip.id, newStart, clip.trackId);
       }
       
       window.removeEventListener('pointermove', handleMove);
@@ -88,6 +91,7 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
   // Handle Left Trim
   const handleLeftTrimPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
+    if (!isSelected) setSelection([clip.id]);
     const startX = e.clientX;
     const initialStart = clip.start;
     const initialDuration = clip.duration;
@@ -96,27 +100,30 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
       const deltaX = moveEvent.clientX - startX;
       const frameDelta = deltaX / zoomScale;
       
-      let newStart = initialStart + frameDelta;
-      let newDuration = initialDuration - frameDelta;
-
-      if (isSnappingEnabled) {
-        const snapped = findSnapPoint(newStart, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
-        const snapDiff = snapped - newStart;
-        newStart += snapDiff;
-        newDuration -= snapDiff;
+      // Limit trim to not flip the clip
+      const maxDelta = initialDuration - 1; 
+      let validDelta = Math.min(frameDelta, maxDelta);
+      
+      // Prevent trimming past 0
+      if (initialStart + validDelta < 0) {
+        validDelta = -initialStart;
       }
 
-      if (newDuration < 1 || newStart < 0) return;
+      if (isSnappingEnabled) {
+        const potentialStart = initialStart + validDelta;
+        const snappedStart = findSnapPoint(potentialStart, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
+        validDelta = snappedStart - initialStart;
+      }
 
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
         if (nodeRef.current) {
-          const pixelDelta = (newStart - initialStart) * zoomScale;
+          const pixelDelta = validDelta * zoomScale;
           nodeRef.current.style.transform = `translateX(${pixelDelta}px)`;
-          nodeRef.current.style.width = `${newDuration * zoomScale}px`;
+          nodeRef.current.style.width = `${(initialDuration - validDelta) * zoomScale}px`;
         }
         if (labelRef.current) {
-          labelRef.current.textContent = `[${Math.floor(newStart)} - ${Math.floor(newStart + newDuration)}]`;
+          labelRef.current.textContent = `[${Math.floor(initialStart + validDelta)} - ${Math.floor(initialStart + initialDuration)}]`;
         }
       });
     };
@@ -125,20 +132,20 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
       const deltaX = upEvent.clientX - startX;
       const frameDelta = deltaX / zoomScale;
       
-      let newStart = initialStart + frameDelta;
-      let newDuration = initialDuration - frameDelta;
+      const maxDelta = initialDuration - 1; 
+      let validDelta = Math.min(frameDelta, maxDelta);
+      if (initialStart + validDelta < 0) validDelta = -initialStart;
 
       if (isSnappingEnabled) {
-        const snapped = findSnapPoint(newStart, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
-        const snapDiff = snapped - newStart;
-        newStart += snapDiff;
-        newDuration -= snapDiff;
+        const potentialStart = initialStart + validDelta;
+        const snappedStart = findSnapPoint(potentialStart, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
+        validDelta = snappedStart - initialStart;
       }
 
       if (nodeRef.current) nodeRef.current.style.transform = `translateX(0px)`;
-      if (newDuration >= 1 && newStart >= 0 && Math.abs(deltaX) > 2) {
+      if (validDelta !== 0 && Math.abs(deltaX) > 2) {
         const isRipple = upEvent.altKey;
-        trimClip(clip.id, 'start', newStart - clip.start, isRipple);
+        trimClip(clip.id, 'start', validDelta, isRipple);
       }
       
       window.removeEventListener('pointermove', handleMove);
@@ -152,21 +159,21 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
   // Handle Right Trim
   const handleRightTrimPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
+    if (!isSelected) setSelection([clip.id]);
     const startX = e.clientX;
     const initialDuration = clip.duration;
     
     const handleMove = (moveEvent: PointerEvent) => {
       const deltaX = moveEvent.clientX - startX;
-      const frameDelta = deltaX / zoomScale;
+      let frameDelta = deltaX / zoomScale;
       
-      let newDuration = initialDuration + frameDelta;
-      
+      let newDuration = Math.max(1, initialDuration + frameDelta);
+
       if (isSnappingEnabled) {
-        const snappedEnd = findSnapPoint(clip.start + newDuration, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
+        const potentialEnd = clip.start + newDuration;
+        const snappedEnd = findSnapPoint(potentialEnd, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
         newDuration = snappedEnd - clip.start;
       }
-
-      if (newDuration < 1) return;
 
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
@@ -181,18 +188,19 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
 
     const handleUp = (upEvent: PointerEvent) => {
       const deltaX = upEvent.clientX - startX;
-      const frameDelta = deltaX / zoomScale;
+      let frameDelta = deltaX / zoomScale;
       
-      let newDuration = initialDuration + frameDelta;
-      
+      let newDuration = Math.max(1, initialDuration + frameDelta);
+
       if (isSnappingEnabled) {
-        const snappedEnd = findSnapPoint(clip.start + newDuration, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
+        const potentialEnd = clip.start + newDuration;
+        const snappedEnd = findSnapPoint(potentialEnd, zoomScale, 10, sequence, clips, playhead.currentFrame, clip.id);
         newDuration = snappedEnd - clip.start;
       }
 
       if (newDuration >= 1 && Math.abs(deltaX) > 2) {
         const isRipple = upEvent.altKey;
-        trimClip(clip.id, 'end', newDuration - clip.duration, isRipple);
+        trimClip(clip.id, 'end', newDuration - initialDuration, isRipple);
       }
       
       window.removeEventListener('pointermove', handleMove);
@@ -203,11 +211,19 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
     window.addEventListener('pointerup', handleUp);
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelection([clip.id]);
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
   return (
     <div 
       ref={nodeRef}
       onPointerDown={handleBodyPointerDown}
       onClick={(e) => { e.stopPropagation(); setSelection([clip.id]); }}
+      onContextMenu={handleContextMenu}
       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={(e) => {
@@ -261,6 +277,16 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
       >
         <div className="w-0.5 h-4 bg-white rounded-full opacity-50" />
       </div>
+      
+      {/* Context Menu */}
+      {contextMenu && (
+        <ClipContextMenu 
+          clipId={clip.id} 
+          x={contextMenu.x} 
+          y={contextMenu.y} 
+          onClose={() => setContextMenu(null)} 
+        />
+      )}
     </div>
   );
 });
