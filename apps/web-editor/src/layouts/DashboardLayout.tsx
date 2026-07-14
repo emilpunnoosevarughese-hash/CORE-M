@@ -2,6 +2,8 @@ import React from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore, authProviders } from '@corem/cloud';
 import { CloudProjectsPanel } from '../components/cloud/CloudProjectsPanel';
+import { DashboardSettings } from '../pages/DashboardSettings';
+import { DashboardProfile } from '../pages/DashboardProfile';
 
 export function DashboardLayout() {
   const { user } = useAuthStore();
@@ -49,8 +51,8 @@ export function DashboardLayout() {
         <Routes>
           <Route path="/" element={<CloudProjectsPanel />} />
           <Route path="/projects" element={<CloudProjectsPanel />} />
-          <Route path="/settings" element={<div className="p-8">Settings Area</div>} />
-          <Route path="/profile" element={<div className="p-8">Profile Area</div>} />
+          <Route path="/settings" element={<DashboardSettings />} />
+          <Route path="/profile" element={<DashboardProfile />} />
         </Routes>
       </main>
     </div>
