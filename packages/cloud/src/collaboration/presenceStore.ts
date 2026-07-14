@@ -35,16 +35,21 @@ export const usePresenceStore = create<PresenceStore>((set) => {
       
       currentProjectRef = myPresenceRef;
 
-      // Set myself as online
+      // Set myself as online - Firebase RTDB does not allow undefined values, use null
       const me: Collaborator = {
         uid: user.uid,
         displayName: user.displayName || user.email || 'Anonymous',
-        photoURL: user.photoURL || undefined,
+        photoURL: user.photoURL || null,
         color: COLORS[Math.floor(Math.random() * COLORS.length)],
         lastActive: Date.now()
       };
+
+      // Strip out any null/undefined values to be safe with Firebase RTDB
+      const meClean = Object.fromEntries(
+        Object.entries(me).filter(([, v]) => v !== undefined && v !== null || typeof v === 'number' || typeof v === 'string' && v.length > 0)
+      );
       
-      firebaseSet(myPresenceRef, me);
+      firebaseSet(myPresenceRef, meClean);
       onDisconnect(myPresenceRef).remove();
 
       // Listen for others
