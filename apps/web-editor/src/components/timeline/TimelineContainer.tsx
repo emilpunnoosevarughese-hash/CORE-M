@@ -37,6 +37,7 @@ export function TimelineContainer() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     const transitionId = e.dataTransfer.getData('application/x-corem-transition');
+    const effectId = e.dataTransfer.getData('application/x-corem-effect');
     let assetId = e.dataTransfer.getData('application/corem-asset') || e.dataTransfer.getData('text/plain');
     const files = Array.from(e.dataTransfer.files);
     
@@ -55,6 +56,34 @@ export function TimelineContainer() {
         clipAId: null,
         clipBId: null,
         parameters: {}
+      });
+      return;
+    }
+
+    if (effectId) {
+      const activeSeq = sequences[activeSequenceId!];
+      const projW = activeSeq?.width || 1920;
+      const projH = activeSeq?.height || 1080;
+      
+      const availableTracks = Object.values(tracks).filter(t => t.type === 'video').sort((a, b) => b.index - a.index);
+      const targetTrackId = availableTracks.length > 0 ? availableTracks[0].id : 'v1';
+
+      addClip({
+        trackId: targetTrackId,
+        assetId: 'adjustment', // virtual asset
+        name: effectId.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        start: frame,
+        duration: 150, // default 5 seconds
+        sourceStart: 0,
+        locked: false,
+        disabled: false,
+        linkedClipIds: [],
+        effects: [{ id: `eff_${Math.random().toString(36).substr(2, 9)}`, effectId, enabled: true, parameters: {} }],
+        blendMode: 'normal',
+        opacity: 1,
+        transform: { x: projW / 2, y: projH / 2, scaleX: 1, scaleY: 1, rotation: 0, anchorX: 0, anchorY: 0 },
+        isAdjustmentLayer: true,
+        assetType: 'solid'
       });
       return;
     }

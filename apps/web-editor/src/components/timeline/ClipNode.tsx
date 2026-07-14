@@ -224,26 +224,8 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
       onPointerDown={handleBodyPointerDown}
       onClick={(e) => { e.stopPropagation(); setSelection([clip.id]); }}
       onContextMenu={handleContextMenu}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-        const effectId = e.dataTransfer.getData('application/x-corem-effect');
-        if (effectId) {
-          const currentEffects = clip.effects || [];
-          updateClip(clip.id, {
-            effects: [
-              ...currentEffects,
-              { id: `eff_${Math.random().toString(36).substr(2, 9)}`, effectId, enabled: true, parameters: {} }
-            ]
-          });
-          setSelection([clip.id]);
-        }
-      }}
       className={`absolute rounded border shadow-md overflow-hidden cursor-grab active:cursor-grabbing text-xs text-white p-1 transition-colors
         ${isSelected ? 'bg-primary/90 border-white z-20' : 'bg-blue-600/80 border-blue-500 z-10'}
-        ${isDragOver ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}
       `}
       style={{
         left: clip.start * zoomScale,

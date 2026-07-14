@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTimelineStore } from '@corem/timeline';
 import { AudioEngine, AudioMixer as CoreMixer } from '@corem/audio';
-import { Volume2, VolumeX, Mic } from 'lucide-react';
+import { Volume2, VolumeX, Mic, SlidersHorizontal } from 'lucide-react';
 
 export function AudioMixerPanel() {
   const { sequences, activeSequenceId } = useTimelineStore();
@@ -27,45 +27,37 @@ export function AudioMixerPanel() {
 
   return (
     <div className="h-full w-full bg-surface border-l border-border flex flex-col select-none">
-      <div className="h-10 border-b border-border flex items-center px-4 font-semibold text-sm">
+      <div className="h-8 border-b border-border flex items-center px-4 font-semibold text-xs text-foreground/80 bg-surface-hover/30">
+        <SlidersHorizontal size={14} className="mr-2" />
         Audio Mixer
       </div>
       
-      <div className="flex-1 overflow-x-auto flex p-4 space-x-6">
-        
-        {/* Track Strips */}
-        {sequence.trackIds.map(trackId => (
-          <TrackStrip key={trackId} trackId={trackId} />
-        ))}
-
+      <div className="flex-1 overflow-y-auto flex flex-col p-2 space-y-2">
         {/* Master Bus Strip */}
-        <div className="w-24 shrink-0 flex flex-col items-center border-l border-border pl-6">
-          <div className="text-xs font-bold text-red-500 mb-4">MASTER</div>
+        <div className="flex items-center space-x-3 p-2 bg-background rounded border border-border">
+          <div className="w-12 text-[10px] font-bold text-red-500 uppercase tracking-wider text-center">Master</div>
           
-          {/* Pan (Disabled for Master usually, or stereo balance) */}
-          <div className="w-10 h-10 rounded-full border-2 border-border mb-6 flex items-center justify-center text-[10px] text-foreground/50">
-            C
-          </div>
-
-          <div className="flex-1 flex space-x-2">
-            {/* Volume Slider */}
+          <div className="flex-1 flex flex-col justify-center space-y-1">
             <input 
               type="range" 
-              className="slider-vertical h-full w-4 accent-red-500" 
+              className="w-full h-1.5 accent-red-500 bg-surface-hover rounded-full appearance-none outline-none" 
               min="0" max="2" step="0.01" defaultValue="1"
               onChange={(e) => {
                 AudioEngine.getInstance().setMasterVolume(parseFloat(e.target.value));
               }}
             />
-            {/* Meter */}
-            <PeakMeter peak={masterPeak} />
+            <PeakMeterHorizontal peak={masterPeak} />
           </div>
 
-          <div className="mt-4 flex space-x-1">
-            <button className="w-6 h-6 rounded bg-surface-hover flex items-center justify-center text-red-500"><VolumeX size={14}/></button>
+          <div className="flex space-x-1 shrink-0">
+            <button className="w-6 h-6 rounded bg-surface-hover hover:bg-surface flex items-center justify-center text-red-500 transition-colors"><Volume2 size={12}/></button>
           </div>
         </div>
 
+        {/* Track Strips */}
+        {sequence.trackIds.map(trackId => (
+          <TrackStrip key={trackId} trackId={trackId} />
+        ))}
       </div>
     </div>
   );
@@ -76,7 +68,6 @@ function TrackStrip({ trackId }: { trackId: string }) {
   const reqRef = useRef<number>(0);
 
   useEffect(() => {
-    // Only works if CoreMixer registered the track
     const updateMeter = () => {
       setPeak(CoreMixer.getInstance().getTrackPeak(trackId));
       reqRef.current = requestAnimationFrame(updateMeter);
@@ -86,46 +77,56 @@ function TrackStrip({ trackId }: { trackId: string }) {
   }, [trackId]);
 
   return (
-    <div className="w-16 shrink-0 flex flex-col items-center">
-      <div className="text-xs font-semibold text-primary mb-4 truncate w-full text-center">{trackId.slice(0, 4)}</div>
+    <div className="flex items-center space-x-3 p-2 bg-surface hover:bg-surface-hover/50 rounded border border-border/50 transition-colors">
+      <div className="w-12 text-[10px] font-semibold text-primary truncate text-center" title={trackId}>{trackId.slice(0, 5)}</div>
       
-      {/* Pan Dial */}
-      <input 
-        type="range" 
-        className="w-12 h-1 accent-primary mb-6" 
-        min="-1" max="1" step="0.1" defaultValue="0"
-        onChange={(e) => CoreMixer.getInstance().setTrackPan(trackId, parseFloat(e.target.value))}
-      />
-
-      <div className="flex-1 flex space-x-2">
+      {/* Pan Dial (Simplified as tiny slider) */}
+      <div className="w-10 flex flex-col items-center shrink-0">
+        <span className="text-[8px] text-foreground/40 mb-0.5">PAN</span>
         <input 
           type="range" 
-          className="slider-vertical h-full w-4 accent-primary" 
+          className="w-full h-1 accent-primary bg-background rounded-full appearance-none outline-none" 
+          min="-1" max="1" step="0.1" defaultValue="0"
+          onChange={(e) => CoreMixer.getInstance().setTrackPan(trackId, parseFloat(e.target.value))}
+        />
+      </div>
+
+      {/* Volume & Meter */}
+      <div className="flex-1 flex flex-col justify-center space-y-1">
+        <input 
+          type="range" 
+          className="w-full h-1.5 accent-primary bg-background rounded-full appearance-none outline-none" 
           min="0" max="2" step="0.01" defaultValue="1"
           onChange={(e) => CoreMixer.getInstance().setTrackVolume(trackId, parseFloat(e.target.value))}
         />
-        <PeakMeter peak={peak} />
+        <PeakMeterHorizontal peak={peak} />
       </div>
 
-      <div className="mt-4 flex space-x-1">
-        <button className="w-6 h-6 rounded bg-surface-hover flex items-center justify-center text-[10px]">M</button>
-        <button className="w-6 h-6 rounded bg-surface-hover flex items-center justify-center text-[10px]">S</button>
+      <div className="flex space-x-1 shrink-0">
+        <button className="w-5 h-5 rounded bg-background hover:bg-surface border border-border flex items-center justify-center text-[9px] font-bold transition-colors">M</button>
+        <button className="w-5 h-5 rounded bg-background hover:bg-surface border border-border flex items-center justify-center text-[9px] font-bold transition-colors">S</button>
       </div>
     </div>
   );
 }
 
-function PeakMeter({ peak }: { peak: number }) {
-  // Peak is 0.0 to 1.0
-  const heightPercent = Math.min(100, peak * 100);
+function PeakMeterHorizontal({ peak }: { peak: number }) {
+  const widthPercent = Math.min(100, peak * 100);
   const isClipping = peak >= 0.99;
 
   return (
-    <div className="w-2 h-full bg-black rounded-full overflow-hidden flex flex-col justify-end relative">
+    <div className="w-full h-1.5 bg-black rounded-full overflow-hidden flex relative">
       <div 
-        className={`w-full transition-all duration-75 ${isClipping ? 'bg-red-500' : 'bg-green-500'}`}
-        style={{ height: `${heightPercent}%` }}
+        className={`h-full transition-all duration-75 ${isClipping ? 'bg-red-500' : 'bg-green-500'}`}
+        style={{ width: `${widthPercent}%` }}
       />
+      {/* Meter markings */}
+      <div className="absolute inset-0 flex justify-between pointer-events-none">
+        <div className="w-px h-full bg-white/10" />
+        <div className="w-px h-full bg-white/10" />
+        <div className="w-px h-full bg-white/10" />
+        <div className="w-px h-full bg-white/10" />
+      </div>
     </div>
   );
 }

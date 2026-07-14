@@ -85,7 +85,7 @@ export function PreviewWindow() {
       const frame = state.playhead.currentFrame;
       
       // Create a fast hash of relevant state to avoid redundant renders when paused
-      const currentHash = `${frame}-${state.activeSequenceId}-${state.tracks ? Object.keys(state.tracks).length : 0}-${state.clips ? JSON.stringify(Object.values(state.clips).map(c => c.effects?.length || 0 + c.transform.x + (c.effects?.[0]?.parameters?.intensity || 0))) : 0}`;
+      const currentHash = `${frame}-${state.activeSequenceId}-${state.tracks ? Object.keys(state.tracks).length : 0}-${state.clips ? JSON.stringify(Object.values(state.clips).map(c => ({ t: c.transform, e: c.effects, m: c.mask, o: c.opacity, b: c.blendMode }))) : 0}`;
       
       if (!state.playhead.isPlaying && currentHash === lastRenderedHash) {
         return;

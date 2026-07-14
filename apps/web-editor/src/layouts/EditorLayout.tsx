@@ -251,7 +251,7 @@ export function EditorLayout() {
           
           {/* Audio Mixer anchored at the bottom of the sidebar */}
           {showMixer && (
-            <div className="mt-auto h-64 shrink-0 border-t border-border bg-background shadow-[0_-5px_15px_rgba(0,0,0,0.2)]">
+            <div className="mt-auto h-40 shrink-0 border-t border-border bg-background shadow-[0_-5px_15px_rgba(0,0,0,0.2)]">
               <AudioMixerPanel />
             </div>
           )}
