@@ -93,7 +93,7 @@ const pushHistory = (state: TimelineState, label: string) => {
 
 export const useTimelineStore = create<TimelineState>((set, get) => ({
   sequences: {
-    'seq_1': { id: 'seq_1', projectId: 'proj_1', name: 'Main Timeline', duration: 10000, timebase: { fps: 30 }, trackIds: ['v1', 'a1'], markers: [] }
+    'seq_1': { id: 'seq_1', projectId: 'proj_1', name: 'Main Timeline', duration: 10000, timebase: { fps: 30 }, width: 1920, height: 1080, trackIds: ['v1', 'a1'], markers: [] }
   },
   tracks: {
     'v1': { id: 'v1', sequenceId: 'seq_1', type: 'video', name: 'V1', index: 0, locked: false, hidden: false, solo: false, muted: false, height: 96, clipIds: [], transitions: [] },

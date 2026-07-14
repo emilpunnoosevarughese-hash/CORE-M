@@ -126,6 +126,8 @@ export interface Sequence {
   id: string;
   projectId: string;
   name: string;
+  width: number;
+  height: number;
   timebase: Timebase;
   duration: number; // total frames
   

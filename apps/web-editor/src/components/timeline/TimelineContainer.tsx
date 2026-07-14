@@ -67,6 +67,10 @@ export function TimelineContainer() {
       const isAudio = asset.type === 'music' || asset.type === 'sfx';
       const targetTrackId = isAudio ? 'a1' : 'v1';
 
+      const activeSeq = sequences[activeSequenceId!];
+      const projW = activeSeq?.width || 1920;
+      const projH = activeSeq?.height || 1080;
+
       addClip({
         trackId: targetTrackId,
         assetId: assetId,
@@ -81,8 +85,8 @@ export function TimelineContainer() {
         blendMode: 'normal',
         opacity: 1,
         transform: {
-          x: 0,
-          y: 0,
+          x: projW / 2,
+          y: projH / 2,
           scaleX: 1,
           scaleY: 1,
           rotation: 0,

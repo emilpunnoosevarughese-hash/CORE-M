@@ -276,9 +276,10 @@ export function PreviewWindow() {
            setIsEmpty(resolvedLayers.length === 0);
            setIsError(resolvedLayers.some(l => l.isError));
            if (workerRef.current) {
+             const activeSeq = useTimelineStore.getState().sequences[useTimelineStore.getState().activeSequenceId!];
              workerRef.current.postMessage({
                type: 'RENDER',
-               payload: { layers: resolvedLayers, requestScopes: true, qualityScale: qualityRef.current }
+               payload: { layers: resolvedLayers, requestScopes: true, qualityScale: qualityRef.current, projectWidth: activeSeq?.width || 1920, projectHeight: activeSeq?.height || 1080 }
              }, resolvedLayers.map(l => l.source).filter(Boolean));
            }
         });
@@ -300,11 +301,18 @@ export function PreviewWindow() {
     });
   }, []);
 
+  const activeSequenceId = useTimelineStore(s => s.activeSequenceId);
+  const activeSequence = useTimelineStore(s => activeSequenceId ? s.sequences[activeSequenceId] : null);
+
   // Resize observer — keep canvas letter/pillar-boxed inside container
   useEffect(() => {
     const updateSize = (width: number, height: number) => {
       if (!canvasRef.current) return;
-      const aspect = 16 / 9;
+      
+      const projW = activeSequence?.width || 1920;
+      const projH = activeSequence?.height || 1080;
+      const aspect = projW / projH;
+      
       let w = width;
       let h = width / aspect;
       if (h > height) { h = height; w = height * aspect; }
@@ -342,7 +350,7 @@ export function PreviewWindow() {
     }
     
     return () => observer.disconnect();
-  }, [qualityScale]);
+  }, [qualityScale, activeSequence?.width, activeSequence?.height]);
 
   const toggleFullscreen = useCallback(() => {
     if (!fullscreen) {

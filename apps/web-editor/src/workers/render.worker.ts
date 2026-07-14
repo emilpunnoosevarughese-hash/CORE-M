@@ -58,7 +58,9 @@ self.onmessage = async (e: MessageEvent) => {
   else if (type === 'RENDER') {
     if (graph) {
       if (payload.layers) {
-        graph.renderComposition(payload.layers);
+        const pW = payload.projectWidth || 1920;
+        const pH = payload.projectHeight || 1080;
+        graph.renderComposition(payload.layers, pW, pH);
       } else {
         // Legacy/Fallback
         const sourceA = payload.frameBitmap || mockSource!;

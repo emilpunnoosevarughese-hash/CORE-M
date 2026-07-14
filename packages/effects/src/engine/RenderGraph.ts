@@ -365,7 +365,7 @@ export class RenderGraph {
     return Math.max(0, modes.indexOf(mode));
   }
 
-  private executeRecursiveComposition(layers: RenderLayer[], targetFbo: WebGLFramebuffer, targetTex: WebGLTexture) {
+  private executeRecursiveComposition(layers: RenderLayer[], targetFbo: WebGLFramebuffer, targetTex: WebGLTexture, projectWidth: number, projectHeight: number) {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, targetFbo);
     this.gl.clearColor(0,0,0,0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -392,7 +392,7 @@ export class RenderGraph {
           this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, tempFbo);
           this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, tempTex, 0);
           
-          this.executeRecursiveComposition(layer.layers, tempFbo, tempTex);
+          this.executeRecursiveComposition(layer.layers, tempFbo, tempTex, projectWidth, projectHeight);
           
           this.frameCache.put(cacheKey, tempFbo, this.width, this.height);
           layerOutputTex = this.frameCache.get(cacheKey)!;
@@ -440,15 +440,15 @@ export class RenderGraph {
       this.gl.uniform1i(this.gl.getUniformLocation(this.compProgram!, 'u_blendMode'), this.getBlendModeInt(layer.blendMode));
       this.gl.uniform2f(this.gl.getUniformLocation(this.compProgram!, 'u_resolution'), this.width, this.height);
       
-      // The transform properties are based on the project resolution (1920x1080), 
+      // The transform properties are based on the project resolution
       // NOT the current preview canvas size (this.width x this.height)
-      let sourceWidth = 1920;
-      let sourceHeight = 1080;
+      let sourceWidth = projectWidth;
+      let sourceHeight = projectHeight;
       if (layer.source) {
         sourceWidth = layer.source.width;
         sourceHeight = layer.source.height;
       }
-      const mat = createTransformMatrix(1920, 1080, layer.transform, sourceWidth, sourceHeight);
+      const mat = createTransformMatrix(projectWidth, projectHeight, layer.transform, sourceWidth, sourceHeight);
       this.gl.uniformMatrix4fv(this.gl.getUniformLocation(this.compProgram!, 'u_transform'), false, mat);
       
       this.drawFullscreenQuad(this.compProgram!);
@@ -538,7 +538,7 @@ export class RenderGraph {
     this.renderStack(sourceA, []); 
   }
 
-  public renderComposition(layers: RenderLayer[]) {
+  public renderComposition(layers: RenderLayer[], projectWidth: number = 1920, projectHeight: number = 1080) {
     this.gl.viewport(0, 0, this.width, this.height);
     
     // We use a final output FBO to build up the entire composition
@@ -553,7 +553,7 @@ export class RenderGraph {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, finalFbo);
     this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, finalTex, 0);
     
-    this.executeRecursiveComposition(layers, finalFbo, finalTex);
+    this.executeRecursiveComposition(layers, finalFbo, finalTex, projectWidth, projectHeight);
     
     // Blit to canvas
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
