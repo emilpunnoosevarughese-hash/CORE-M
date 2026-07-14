@@ -104,15 +104,26 @@ export function TimelineContainer() {
 
       // Route audio to audio tracks, others to video tracks
       const isAudio = asset.type === 'music' || asset.type === 'sfx';
+      const targetType = isAudio ? 'audio' : 'video';
       
-      // Look for a suitable track dynamically
+      // Attempt to guess the track based on Y coordinate
+      // Assumes tracks are stacked from top to bottom, each 96px high
+      const trackIndex = Math.max(0, Math.floor((y - 32) / 96)); // subtract 32 for the ruler header
+      
+      const allTracks = Object.values(tracks).sort((a, b) => a.index - b.index);
+      const trackAtY = allTracks.find(t => t.index === trackIndex);
+      
+      let targetTrackId = trackAtY?.id;
+      
+      // If the dropped track type doesn't match the asset type, fallback to first available
+      if (!targetTrackId || tracks[targetTrackId].type !== targetType) {
+        const availableTracks = allTracks.filter(t => t.type === targetType);
+        targetTrackId = availableTracks.length > 0 ? availableTracks[0].id : (isAudio ? 'a1' : 'v1');
+      }
+
       const activeSeq = sequences[activeSequenceId!];
       const projW = activeSeq?.width || 1920;
       const projH = activeSeq?.height || 1080;
-      
-      const targetType = isAudio ? 'audio' : 'video';
-      const availableTracks = Object.values(tracks).filter(t => t.type === targetType).sort((a, b) => a.index - b.index);
-      const targetTrackId = availableTracks.length > 0 ? availableTracks[0].id : (isAudio ? 'a1' : 'v1');
 
       // Aspect ratio mismatch check
       if (targetType === 'video' && asset.resolution) {

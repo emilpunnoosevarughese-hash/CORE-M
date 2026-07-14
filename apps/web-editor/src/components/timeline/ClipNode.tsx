@@ -225,7 +225,10 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
       onClick={(e) => { e.stopPropagation(); setSelection([clip.id]); }}
       onContextMenu={handleContextMenu}
       className={`absolute rounded border shadow-md overflow-hidden cursor-grab active:cursor-grabbing text-xs text-white p-1 transition-colors
-        ${isSelected ? 'bg-primary/90 border-white z-20' : 'bg-blue-600/80 border-blue-500 z-10'}
+        ${isSelected 
+          ? (track?.type === 'audio' ? 'bg-emerald-500/90 border-white z-20' : 'bg-primary/90 border-white z-20') 
+          : (track?.type === 'audio' ? 'bg-emerald-600/80 border-emerald-500 z-10' : 'bg-blue-600/80 border-blue-500 z-10')
+        }
       `}
       style={{
         left: clip.start * zoomScale,

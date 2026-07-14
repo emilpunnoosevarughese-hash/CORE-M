@@ -225,9 +225,12 @@ if (typeof window !== 'undefined' && !syncInitialized) {
         if (item.status === 'completed' && prevItem?.status !== 'completed' && item.metadata && item.url) {
           const ext = item.file.name.split('.').pop()?.toLowerCase() || '';
           let type: AssetType = 'video';
-          if (item.file.type.startsWith('audio/')) type = 'music';
-          else if (item.file.type.startsWith('image/')) type = 'image';
-
+          if (item.file.type.startsWith('audio/') || ['mp3','wav','m4a','aac','ogg','flac'].includes(ext)) {
+            type = 'music';
+          } else if (item.file.type.startsWith('image/') || ['png','jpg','jpeg','webp','avif','svg','gif'].includes(ext)) {
+            type = 'image';
+          }
+          
           const assetId = item.assetId || `asset-${item.id}`;
           
           useAssetStore.getState().addAsset({
