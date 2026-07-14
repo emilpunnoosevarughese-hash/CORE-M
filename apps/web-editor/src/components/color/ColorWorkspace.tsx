@@ -1,4 +1,5 @@
 import React from 'react';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { PreviewWindow } from '../preview/PreviewWindow';
 import { TimelineContainer } from '../timeline/TimelineContainer';
 import { ScopesPanel } from './ScopesPanel';
@@ -38,76 +39,87 @@ export function ColorWorkspace() {
         <div className="mx-auto font-semibold text-sm">Color Grading Studio</div>
       </header>
 
-      {/* Top Half: Preview & Scopes */}
-      <div className="flex-1 flex min-h-[40vh] border-b border-border">
-        {/* Left: Preview */}
-        <div className="flex-[2] flex flex-col border-r border-border">
-          <PreviewWindow />
-        </div>
+      {/* Main Workspace Area */}
+      <PanelGroup direction="vertical" className="flex-1 overflow-hidden">
         
-        {/* Right: Scopes */}
-        <div className="flex-1 flex flex-col p-2 bg-surface">
-          <ScopesPanel />
-        </div>
-      </div>
+        {/* Top Half: Preview & Scopes */}
+        <Panel defaultSize={50} minSize={20} className="flex flex-col">
+          <PanelGroup direction="horizontal" className="flex-1 h-full border-b border-border">
+            {/* Left: Preview */}
+            <Panel defaultSize={65} minSize={30} className="flex flex-col min-w-0 h-full">
+              <PreviewWindow />
+            </Panel>
+            
+            <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors cursor-col-resize z-10" />
 
-      {/* Middle Half: Color Controls */}
-      <div className="h-64 flex bg-surface border-b border-border">
-        {/* Left Sidebar: Modes */}
-        <div className="w-16 flex flex-col items-center py-4 space-y-4 border-r border-border bg-background">
-          <button 
-            onClick={() => setActiveMode('primary')}
-            className={`p-2 rounded-lg transition-colors \${activeMode === 'primary' ? 'bg-primary text-primary-foreground' : 'text-foreground/50 hover:text-foreground hover:bg-surface-hover'}`}
-            title="Primary Wheels"
-          >
-            <Palette size={20} />
-          </button>
-          <button 
-            onClick={() => setActiveMode('curves')}
-            className={`p-2 rounded-lg transition-colors \${activeMode === 'curves' ? 'bg-primary text-primary-foreground' : 'text-foreground/50 hover:text-foreground hover:bg-surface-hover'}`}
-            title="Curves"
-          >
-            <Activity size={20} />
-          </button>
-          <button 
-            onClick={() => setActiveMode('lut')}
-            className={`p-2 rounded-lg transition-colors \${activeMode === 'lut' ? 'bg-primary text-primary-foreground' : 'text-foreground/50 hover:text-foreground hover:bg-surface-hover'}`}
-            title="LUTs"
-          >
-            <ImageIcon size={20} />
-          </button>
-        </div>
+            {/* Right: Scopes */}
+            <Panel defaultSize={35} minSize={20} className="flex flex-col p-2 bg-surface min-w-0 h-full">
+              <ScopesPanel />
+            </Panel>
+          </PanelGroup>
+        </Panel>
 
-        {/* Center: Controls */}
-        <div className="flex-1 flex overflow-hidden">
-          {activeMode === 'primary' && (
-            <div className="flex-1 flex">
-              <div className="w-64 border-r border-border overflow-y-auto">
-                <PrimaryControls />
+        <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors cursor-row-resize z-10" />
+
+        {/* Middle Half: Color Controls */}
+        <Panel defaultSize={20} minSize={10} className="flex bg-surface border-b border-border min-h-[150px]">
+          {/* Left Sidebar: Modes */}
+          <div className="w-16 flex flex-col items-center py-4 space-y-4 border-r border-border bg-background">
+            <button 
+              onClick={() => setActiveMode('primary')}
+              className={`p-2 rounded-lg transition-colors ${activeMode === 'primary' ? 'bg-primary text-primary-foreground' : 'text-foreground/50 hover:text-foreground hover:bg-surface-hover'}`}
+              title="Primary Wheels"
+            >
+              <Palette size={20} />
+            </button>
+            <button 
+              onClick={() => setActiveMode('curves')}
+              className={`p-2 rounded-lg transition-colors ${activeMode === 'curves' ? 'bg-primary text-primary-foreground' : 'text-foreground/50 hover:text-foreground hover:bg-surface-hover'}`}
+              title="Curves"
+            >
+              <Activity size={20} />
+            </button>
+            <button 
+              onClick={() => setActiveMode('lut')}
+              className={`p-2 rounded-lg transition-colors ${activeMode === 'lut' ? 'bg-primary text-primary-foreground' : 'text-foreground/50 hover:text-foreground hover:bg-surface-hover'}`}
+              title="LUTs"
+            >
+              <ImageIcon size={20} />
+            </button>
+          </div>
+
+          {/* Center: Controls */}
+          <div className="flex-1 flex overflow-hidden">
+            {activeMode === 'primary' && (
+              <div className="flex-1 flex">
+                <div className="w-64 border-r border-border overflow-y-auto">
+                  <PrimaryControls />
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <ColorWheels />
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto">
-                <ColorWheels />
+            )}
+            {activeMode === 'curves' && (
+              <div className="flex-1 flex overflow-hidden">
+                <CurvesEditor />
               </div>
-            </div>
-          )}
-          {activeMode === 'curves' && (
-            <div className="flex-1 flex overflow-hidden">
-              <CurvesEditor />
-            </div>
-          )}
-          {activeMode === 'lut' && (
-            <div className="flex-1 flex overflow-y-auto">
-              <LutBrowser />
-            </div>
-          )}
-        </div>
-      </div>
+            )}
+            {activeMode === 'lut' && (
+              <div className="flex-1 flex overflow-y-auto">
+                <LutBrowser />
+              </div>
+            )}
+          </div>
+        </Panel>
 
-      {/* Bottom: Timeline */}
-      <div className="h-64 bg-background">
-        <TimelineContainer />
-      </div>
+        <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors cursor-row-resize z-10" />
 
+        {/* Bottom: Timeline */}
+        <Panel defaultSize={30} minSize={15} className="flex flex-col bg-surface overflow-hidden">
+          <TimelineContainer />
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }

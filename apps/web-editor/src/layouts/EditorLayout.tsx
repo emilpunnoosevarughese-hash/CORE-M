@@ -260,7 +260,9 @@ export function EditorLayout() {
         {/* Center: Preview + Timeline stacked, fills remaining space */}
         <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           <PreviewWindow />
-          <TimelineContainer />
+          <div className="h-72 shrink-0">
+            <TimelineContainer />
+          </div>
         </main>
 
         {/* Inspector Panel */}

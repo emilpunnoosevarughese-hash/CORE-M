@@ -171,7 +171,7 @@ export function TimelineContainer() {
 
   // Virtualized Tracks Area
   return (
-    <div className={`border-t border-border bg-surface shrink-0 flex flex-col relative w-full overflow-hidden select-none ${showGraphEditor ? 'h-[50vh]' : 'h-72'}`}>
+    <div className={`border-t border-border bg-surface shrink-0 flex flex-col relative w-full overflow-hidden select-none h-full`}>
       
       {/* Timeline Toolbar */}
       <div className="h-8 border-b border-border flex items-center px-2 justify-between bg-surface shrink-0 z-40">
