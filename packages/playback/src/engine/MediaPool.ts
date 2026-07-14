@@ -83,13 +83,13 @@ export class MediaPool {
     // Create new
     const video = document.createElement('video');
     video.id = `corem-vid-${assetId}`;
+    if (sourceUrl.startsWith('http') && !sourceUrl.startsWith('blob:')) {
+      video.crossOrigin = 'anonymous';
+    }
     video.src = sourceUrl;
     video.muted = false;
     video.playsInline = true;
     video.preload = 'auto';
-    if (sourceUrl.startsWith('http') && !sourceUrl.startsWith('blob:')) {
-      video.crossOrigin = 'anonymous';
-    }
     video.style.display = 'none';
     video.onerror = () => {
       console.error(`MediaPool: Failed to load video asset ${assetId} from ${sourceUrl}`, video.error);
@@ -167,11 +167,11 @@ export class MediaPool {
 
     const audio = document.createElement('audio');
     audio.id = `corem-aud-${assetId}`;
-    audio.src = sourceUrl;
-    audio.style.display = 'none';
     if (sourceUrl.startsWith('http') && !sourceUrl.startsWith('blob:')) {
       audio.crossOrigin = 'anonymous';
     }
+    audio.src = sourceUrl;
+    audio.style.display = 'none';
     audio.onerror = () => {
       console.error(`MediaPool: Failed to load audio asset ${assetId} from ${sourceUrl}`, audio.error);
     };

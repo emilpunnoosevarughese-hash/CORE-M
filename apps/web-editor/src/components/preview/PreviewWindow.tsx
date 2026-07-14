@@ -239,7 +239,20 @@ export function PreviewWindow() {
                   CacheManager.set(cacheKey, bitmap);
                   return { ...layer, source: bitmap };
                } catch(e) {
-                  return { ...layer, source: null };
+                  // Fallback for browsers/scenarios where createImageBitmap(video) fails
+                  try {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = video.videoWidth || 1920;
+                    tempCanvas.height = video.videoHeight || 1080;
+                    const ctx = tempCanvas.getContext('2d');
+                    if (ctx) ctx.drawImage(video, 0, 0);
+                    const bitmap = await createImageBitmap(tempCanvas);
+                    CacheManager.set(cacheKey, bitmap);
+                    return { ...layer, source: bitmap };
+                  } catch(e2) {
+                    console.warn("createImageBitmap fallback failed", e2);
+                    return { ...layer, source: null };
+                  }
                }
              }
           }
