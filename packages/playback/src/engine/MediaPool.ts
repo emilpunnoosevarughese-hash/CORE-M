@@ -90,7 +90,14 @@ export class MediaPool {
     video.muted = false;
     video.playsInline = true;
     video.preload = 'auto';
-    video.style.display = 'none';
+    // Do not use display: 'none', as some browsers optimize out hardware video decoding 
+    // for hidden elements, resulting in black frames during createImageBitmap/drawImage.
+    video.style.position = 'absolute';
+    video.style.opacity = '0.001';
+    video.style.pointerEvents = 'none';
+    video.style.zIndex = '-1000';
+    video.style.width = '1px';
+    video.style.height = '1px';
     video.onerror = () => {
       console.error(`MediaPool: Failed to load video asset ${assetId} from ${sourceUrl}`, video.error);
       video.dataset.error = 'true';
