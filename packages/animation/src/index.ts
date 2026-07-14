@@ -7,3 +7,4 @@ export * from './PresetLibrary';
 export * from './ShapeLayerEngine';
 export * from './TextAnimationEngine';
 export * from './MotionScheduler';
+export * from './MotionGraph';
