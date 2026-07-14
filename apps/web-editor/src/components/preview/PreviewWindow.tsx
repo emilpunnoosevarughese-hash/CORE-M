@@ -214,14 +214,17 @@ export function PreviewWindow() {
                if (video.paused) {
                  video.currentTime = videoTime;
                  video.play().catch(e => console.warn('Play prevented:', e));
-               } else if (Math.abs(video.currentTime - videoTime) > 0.5) {
+               } else if (Math.abs(video.currentTime - videoTime) > 0.5 && !video.seeking) {
                  video.currentTime = videoTime;
                }
              } else {
                if (!video.paused) {
                  video.pause();
                }
-               if (Math.abs(video.currentTime - videoTime) > 0.05) {
+               // Prevent infinite seeking if the browser clamps to a keyframe
+               const lastSeek = video.dataset.lastSeekTarget ? parseFloat(video.dataset.lastSeekTarget) : -1;
+               if (Math.abs(video.currentTime - videoTime) > 0.05 && !video.seeking && Math.abs(lastSeek - videoTime) > 0.01) {
+                 video.dataset.lastSeekTarget = videoTime.toString();
                  video.currentTime = videoTime;
                }
              }
