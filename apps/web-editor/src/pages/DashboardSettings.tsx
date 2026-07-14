@@ -1,9 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, Moon, Monitor, Palette, Save } from 'lucide-react';
 
 export function DashboardSettings() {
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [autoSave, setAutoSave] = useState(true);
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark');
+    setTheme(isDark ? 'dark' : 'light');
+  }, []);
+
+  const handleThemeChange = (newTheme: 'dark' | 'light') => {
+    setTheme(newTheme);
+    localStorage.setItem('corem_theme', newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-8">
@@ -24,15 +39,14 @@ export function DashboardSettings() {
               </div>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => setTheme('dark')}
+                  onClick={() => handleThemeChange('dark')}
                   className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-sm font-medium transition-colors ${theme === 'dark' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-hover'}`}
                 >
                   <Moon size={16} /> Dark
                 </button>
                 <button 
-                  onClick={() => setTheme('light')}
-                  className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-sm font-medium transition-colors opacity-50 cursor-not-allowed ${theme === 'light' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-hover'}`}
-                  title="Coming Soon"
+                  onClick={() => handleThemeChange('light')}
+                  className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-sm font-medium transition-colors ${theme === 'light' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-hover'}`}
                 >
                   <Monitor size={16} /> Light
                 </button>
