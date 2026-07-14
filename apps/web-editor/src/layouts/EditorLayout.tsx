@@ -276,8 +276,7 @@ export function EditorLayout() {
 
       <Suspense fallback={null}>
         <RenderQueuePanel />
-        <ExportDialog 
-          isOpen={showExport} 
+
         {isMarketplaceOpen && <PluginMarketplace onClose={() => toggleMarketplace()} />}
         {isPluginManagerOpen && <PluginManager onClose={() => togglePluginManager()} />}
         {showExport && <ExportDialog isOpen={showExport} onClose={() => setShowExport(false)} sequenceId={activeSequenceId!} />}
