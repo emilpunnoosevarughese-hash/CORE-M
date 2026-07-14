@@ -87,7 +87,7 @@ export class MediaPool {
       video.crossOrigin = 'anonymous';
     }
     video.src = sourceUrl;
-    video.muted = false;
+    video.muted = true;
     video.playsInline = true;
     video.preload = 'auto';
     // Do not use display: 'none', as some browsers optimize out hardware video decoding 

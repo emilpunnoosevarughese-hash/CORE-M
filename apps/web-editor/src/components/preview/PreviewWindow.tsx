@@ -213,7 +213,7 @@ export function PreviewWindow() {
              
              if (state.playhead.isPlaying) {
                if (video.paused) {
-                 video.currentTime = videoTime;
+                 if (!video.seeking) video.currentTime = videoTime;
                  video.play().catch(e => console.warn('Play prevented:', e));
                } else if (Math.abs(video.currentTime - videoTime) > 0.5 && !video.seeking) {
                  video.currentTime = videoTime;
