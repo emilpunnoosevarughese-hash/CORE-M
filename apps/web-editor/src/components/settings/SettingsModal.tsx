@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Moon, Monitor, Sun, Palette, Keyboard } from 'lucide-react';
 
@@ -7,6 +7,23 @@ interface Props {
 }
 
 export function SettingsModal({ onClose }: Props) {
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark');
+    setTheme(isDark ? 'dark' : 'light');
+  }, []);
+
+  const handleThemeChange = (newTheme: 'dark' | 'light') => {
+    setTheme(newTheme);
+    localStorage.setItem('corem_theme', newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="bg-surface border border-border rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
@@ -35,10 +52,16 @@ export function SettingsModal({ onClose }: Props) {
                   <div className="text-xs text-foreground/50">Select your preferred color scheme</div>
                 </div>
                 <div className="flex gap-2">
-                  <button className="px-3 py-1.5 rounded-lg border border-primary bg-primary/10 text-primary flex items-center gap-2 text-xs font-medium">
+                  <button 
+                    onClick={() => handleThemeChange('dark')}
+                    className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 text-xs font-medium transition-colors ${theme === 'dark' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground hover:bg-surface-hover'}`}
+                  >
                     <Moon size={14} /> Dark
                   </button>
-                  <button disabled className="px-3 py-1.5 rounded-lg border border-border opacity-50 flex items-center gap-2 text-xs font-medium cursor-not-allowed" title="Coming Soon">
+                  <button 
+                    onClick={() => handleThemeChange('light')}
+                    className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 text-xs font-medium transition-colors ${theme === 'light' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground hover:bg-surface-hover'}`}
+                  >
                     <Sun size={14} /> Light
                   </button>
                 </div>

@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CORE M</title>
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('corem_theme');
+          if (theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else {
+            // Default to dark
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
