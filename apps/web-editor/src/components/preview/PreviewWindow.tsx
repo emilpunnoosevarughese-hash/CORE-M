@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, Pause, Maximize, SkipBack, SkipForward, Volume2, Settings, Minimize, VideoOff } from 'lucide-react';
+import { Play, Pause, Maximize, SkipBack, SkipForward, Volume2, VolumeX, Settings, Minimize, VideoOff } from 'lucide-react';
 import { usePlaybackStore } from '@corem/playback';
 import { useTimelineStore } from '@corem/timeline';
 import { Interpolator } from '@corem/animation';
@@ -27,6 +27,7 @@ export function PreviewWindow() {
   const [isError, setIsError] = useState(false);
   const [previewQuality, setPreviewQuality] = useState('auto');
   const qualityRef = useRef('auto');
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { qualityRef.current = previewQuality; }, [previewQuality]);
 
   const { isPlaying, togglePlay } = usePlaybackStore();
@@ -45,9 +46,10 @@ export function PreviewWindow() {
   // Initialize Worker
   useEffect(() => {
     if (!canvasRef.current) return;
+    // Guard: if canvas was already transferred in this session (strict mode double-invoke), skip
+    if (canvasRef.current.dataset.transferred === 'true') return;
     if ('transferControlToOffscreen' in canvasRef.current) {
       try {
-        if (!canvasRef.current.dataset.transferred) {
           const offscreen = canvasRef.current.transferControlToOffscreen();
           canvasRef.current.dataset.transferred = 'true';
           const worker = new Worker(new URL('../../workers/render.worker.ts', import.meta.url), { type: 'module' });
@@ -60,13 +62,13 @@ export function PreviewWindow() {
           };
           worker.postMessage({ type: 'INIT', payload: { canvas: offscreen } }, [offscreen]);
           workerRef.current = worker;
-        }
       } catch (err) {
-        console.warn('Canvas already transferred or error:', err);
+        console.warn('Canvas worker init failed:', err);
       }
       return () => {
         workerRef.current?.terminate();
         workerRef.current = null;
+        // Allow re-transfer on future mount by resetting the flag (canvas is a new DOM node each mount)
       };
     }
   }, []);
@@ -280,8 +282,22 @@ export function PreviewWindow() {
         });
         
         Promise.all(fetchFramePromises).then(resolvedLayers => {
-           setIsLoading(anyLoading);
-           setIsEmpty(resolvedLayers.length === 0);
+           // Debounce loading indicator — only show after 400ms of sustained buffering
+           if (anyLoading) {
+             if (!loadingTimerRef.current) {
+               loadingTimerRef.current = setTimeout(() => {
+                 setIsLoading(true);
+                 loadingTimerRef.current = null;
+               }, 400);
+             }
+           } else {
+             if (loadingTimerRef.current) {
+               clearTimeout(loadingTimerRef.current);
+               loadingTimerRef.current = null;
+             }
+             setIsLoading(false);
+           }
+           setIsEmpty(resolvedLayers.filter(l => !l.isAdjustmentLayer).length === 0);
            setIsError(resolvedLayers.some(l => l.isError));
            if (workerRef.current) {
              const activeSeq = useTimelineStore.getState().sequences[useTimelineStore.getState().activeSequenceId!];
@@ -460,9 +476,18 @@ export function PreviewWindow() {
       {/* Playback Controls */}
       <div className="h-12 bg-surface border-t border-border flex items-center justify-between px-4 shrink-0 gap-4">
         
-        {/* Left: timecode + volume */}
-        <div className="flex items-center gap-3 min-w-0">
-          <Volume2 size={15} className="text-foreground/50 shrink-0" />
+        {/* Left: timecode + volume + mute */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={() => {
+              const { isMuted, toggleMute } = usePlaybackStore.getState();
+              toggleMute();
+            }}
+            className="p-1 hover:bg-surface-hover rounded transition-colors text-foreground/60"
+            title="Toggle Mute"
+          >
+            {volume === 0 ? <VolumeX size={15} className="text-red-400" /> : <Volume2 size={15} />}
+          </button>
           <input
             type="range" min={0} max={1} step={0.05} value={volume}
             onChange={e => setVolume(Number(e.target.value))}

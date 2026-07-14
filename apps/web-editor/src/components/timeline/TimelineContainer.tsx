@@ -103,22 +103,34 @@ export function TimelineContainer() {
       const durationFrames = Math.max(1, Math.round((asset.duration || 10) * 30));
 
       // Route audio to audio tracks, others to video tracks
-      const isAudio = asset.type === 'music' || asset.type === 'sfx';
+      // Check asset name extensions as extra fallback in case type was wrongly set
+      const audioExts = ['mp3','wav','m4a','aac','ogg','flac','opus','wma','aiff'];
+      const nameExt = asset.name.split('.').pop()?.toLowerCase() || '';
+      const isAudio = asset.type === 'music' || asset.type === 'sfx' || audioExts.includes(nameExt);
       const targetType = isAudio ? 'audio' : 'video';
       
-      // Attempt to guess the track based on Y coordinate
-      // Assumes tracks are stacked from top to bottom, each 96px high
-      const trackIndex = Math.max(0, Math.floor((y - 32) / 96)); // subtract 32 for the ruler header
-      
       const allTracks = Object.values(tracks).sort((a, b) => a.index - b.index);
+      
+      // Attempt to guess the track based on Y coordinate
+      const trackIndex = Math.max(0, Math.floor((y - 32) / 96));
       const trackAtY = allTracks.find(t => t.index === trackIndex);
       
       let targetTrackId = trackAtY?.id;
       
-      // If the dropped track type doesn't match the asset type, fallback to first available
-      if (!targetTrackId || tracks[targetTrackId].type !== targetType) {
+      // If the dropped track type doesn't match the asset type, fallback to first available of correct type
+      if (!targetTrackId || tracks[targetTrackId]?.type !== targetType) {
         const availableTracks = allTracks.filter(t => t.type === targetType);
-        targetTrackId = availableTracks.length > 0 ? availableTracks[0].id : (isAudio ? 'a1' : 'v1');
+        if (availableTracks.length > 0) {
+          targetTrackId = availableTracks[0].id;
+        } else {
+          // Auto-create the correct track type if none exists
+          const newTrackId = isAudio ? `a${Date.now()}` : `v${Date.now()}`;
+          addTrack(isAudio ? 'audio' : 'video');
+          // After adding, get the newly created track
+          const updated = useTimelineStore.getState().tracks;
+          const newTrack = Object.values(updated).find(t => t.type === targetType && !allTracks.find(ot => ot.id === t.id));
+          targetTrackId = newTrack?.id || (isAudio ? 'a1' : 'v1');
+        }
       }
 
       const activeSeq = sequences[activeSequenceId!];
@@ -188,12 +200,6 @@ export function TimelineContainer() {
       <div className="h-8 border-b border-border flex items-center px-2 justify-between bg-surface shrink-0 z-40">
         <div className="flex items-center space-x-4">
           <div className="text-xs text-foreground/50 font-medium">Timeline</div>
-          <button 
-            onClick={toggleGraphEditor} 
-            className={`text-[10px] px-2 py-0.5 rounded ${showGraphEditor ? 'bg-primary text-white' : 'bg-surface-hover hover:bg-surface text-foreground/70'}`}
-          >
-            Graph Editor
-          </button>
         </div>
         <div className="flex items-center space-x-2">
           {/* Zoom Slider */}
@@ -210,8 +216,8 @@ export function TimelineContainer() {
       </div>
 
       <div className={`flex flex-col flex-1 overflow-hidden relative`}>
-        {/* Top Half: Timeline */}
-        <div className={`flex ${showGraphEditor ? 'h-1/2 border-b border-border' : 'h-full'} overflow-hidden relative`}>
+        {/* Timeline tracks area */}
+        <div className={`flex h-full overflow-hidden relative`}>
           {/* Track Headers (Left Pane) */}
           <div className="w-64 border-r border-border bg-surface z-30 shrink-0 shadow-lg">
             <div className="h-8 bg-surface-hover border-b border-border flex items-center justify-between px-2 text-[10px] text-foreground/50">
@@ -311,12 +317,7 @@ export function TimelineContainer() {
           </div>
         </div>
 
-        {/* Bottom Half: Graph Editor */}
-        {showGraphEditor && (
-          <div className="h-1/2 flex overflow-hidden">
-            <GraphEditor />
-          </div>
-        )}
+
 
       </div>
     </div>

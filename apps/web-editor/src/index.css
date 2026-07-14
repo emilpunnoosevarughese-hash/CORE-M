@@ -14,7 +14,20 @@
 }
 
 @layer base {
+  /* Dark theme IS the default for the NLE */
   :root {
+    --background: #09090b;
+    --foreground: #fafafa;
+    --primary: #2563eb;
+    --primary-foreground: #ffffff;
+    --surface: #18181b;
+    --surface-foreground: #f4f4f5;
+    --surface-hover: #27272a;
+    --border: #27272a;
+  }
+
+  /* Light mode is opt-in via .light class */
+  .light {
     --background: #f8fafc;
     --foreground: #0f172a;
     --primary: #3b82f6;
@@ -25,6 +38,7 @@
     --border: #e2e8f0;
   }
 
+  /* Keep .dark class working too for compatibility */
   .dark {
     --background: #09090b;
     --foreground: #fafafa;
