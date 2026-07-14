@@ -24,6 +24,7 @@ export function PreviewWindow() {
   const [timecode, setTimecode] = useState('00:00:00:00');
   const [isLoading, setIsLoading] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [qualityScale, setQualityScale] = useState(1);
   const qualityRef = useRef(1);
   useEffect(() => { qualityRef.current = qualityScale; }, [qualityScale]);
@@ -273,6 +274,7 @@ export function PreviewWindow() {
         Promise.all(fetchFramePromises).then(resolvedLayers => {
            setIsLoading(anyLoading);
            setIsEmpty(resolvedLayers.length === 0);
+           setIsError(resolvedLayers.some(l => l.isError));
            if (workerRef.current) {
              workerRef.current.postMessage({
                type: 'RENDER',
@@ -388,11 +390,24 @@ export function PreviewWindow() {
         )}
 
         {/* Empty State Overlay */}
-        {isEmpty && !isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-            <div className="flex flex-col items-center gap-3 text-white/30">
-              <VideoOff size={48} className="opacity-50" />
-              <span className="text-sm font-medium tracking-widest uppercase">No Video at this Frame</span>
+        {isEmpty && !isLoading && !isError && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black pointer-events-none">
+            <div className="flex flex-col items-center gap-3 opacity-30">
+              <VideoOff size={48} />
+              <div className="text-sm font-medium tracking-wider uppercase">No Video at this Frame</div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Overlay */}
+        {isError && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black pointer-events-none">
+            <div className="flex flex-col items-center gap-3 text-red-500/80">
+              <VideoOff size={48} />
+              <div className="text-sm font-medium tracking-wider">MEDIA PLAYBACK ERROR</div>
+              <div className="text-xs text-foreground/50 max-w-xs text-center mt-2">
+                The browser cannot play this video format (e.g. H.265/HEVC) or it is blocked by CORS.
+              </div>
             </div>
           </div>
         )}
