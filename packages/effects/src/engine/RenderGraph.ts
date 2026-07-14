@@ -126,6 +126,7 @@ export class RenderGraph {
   private fboB: WebGLFramebuffer;
   private texA: WebGLTexture;
   private texB: WebGLTexture;
+  private sourceTex: WebGLTexture;
 
   private width: number = 1920;
   private height: number = 1080;
@@ -172,6 +173,12 @@ export class RenderGraph {
 
     const fbA = createFBO(); this.fboA = fbA.fbo; this.texA = fbA.tex;
     const fbB = createFBO(); this.fboB = fbB.fbo; this.texB = fbB.tex;
+
+    this.sourceTex = this.gl.createTexture()!;
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.sourceTex);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
 
     // Advanced Blend Modes Shader
     const compFrag = `#version 300 es
@@ -384,9 +391,9 @@ export class RenderGraph {
         
         layerOutputTex = this.processEffects(this.texA, layer.effects);
       } else if (layer.source) {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texA);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.sourceTex);
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, layer.source);
-        layerOutputTex = this.processEffects(this.texA, layer.effects);
+        layerOutputTex = this.processEffects(this.sourceTex, layer.effects);
       }
       
       if (!layerOutputTex) continue;
