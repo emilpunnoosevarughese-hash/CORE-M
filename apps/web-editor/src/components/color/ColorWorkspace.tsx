@@ -8,6 +8,8 @@ import { CurvesEditor } from './CurvesEditor';
 import { LutBrowser } from './LutBrowser';
 import { useColorStore } from './store';
 import { Palette, Sliders, Activity, Image as ImageIcon } from 'lucide-react';
+import { AudioEngine } from '@corem/audio';
+import { DeviceProfiler } from '@corem/render-engine';
 
 export function ColorWorkspace() {
   const { activeMode, setActiveMode } = useColorStore();
@@ -15,8 +17,18 @@ export function ColorWorkspace() {
   // A real app would get this from router params
   const projectId = '123'; 
 
+  const handleTimelineInteraction = () => {
+    AudioEngine.getInstance().initialize();
+    try {
+      DeviceProfiler.getProfile();
+    } catch(e) {}
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div 
+      className="flex flex-col h-screen bg-background overflow-hidden"
+      onClickCapture={handleTimelineInteraction}
+    >
       
       {/* Header */}
       <header className="h-12 border-b border-border bg-surface flex items-center px-4 shrink-0">

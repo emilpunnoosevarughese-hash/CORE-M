@@ -34,14 +34,17 @@ export function TimelineContainer() {
     return () => el.removeEventListener('wheel', handleWheel);
   }, []);
   
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
     const transitionId = e.dataTransfer.getData('application/x-corem-transition');
-    const assetId = e.dataTransfer.getData('application/corem-asset') || e.dataTransfer.getData('text/plain');
+    let assetId = e.dataTransfer.getData('application/corem-asset') || e.dataTransfer.getData('text/plain');
+    const files = Array.from(e.dataTransfer.files);
     
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     
     const x = e.clientX - rect.left + scrollX;
+    const y = e.clientY - rect.top + scrollY; // Use y coordinate to guess track if possible
     const frame = Math.max(0, x / zoomScale);
     
     if (transitionId) {
@@ -56,6 +59,13 @@ export function TimelineContainer() {
       return;
     }
 
+    if (files.length > 0) {
+      // User dropped a file directly from OS
+      const file = files[0];
+      const newAsset = await useAssetStore.getState().addLocalAsset(file);
+      assetId = newAsset.id;
+    }
+
     if (assetId) {
       const asset = useAssetStore.getState().assets[assetId];
       if (!asset) return;
@@ -65,11 +75,15 @@ export function TimelineContainer() {
 
       // Route audio to audio tracks, others to video tracks
       const isAudio = asset.type === 'music' || asset.type === 'sfx';
-      const targetTrackId = isAudio ? 'a1' : 'v1';
-
+      
+      // Look for a suitable track dynamically
       const activeSeq = sequences[activeSequenceId!];
       const projW = activeSeq?.width || 1920;
       const projH = activeSeq?.height || 1080;
+      
+      const targetType = isAudio ? 'audio' : 'video';
+      const availableTracks = Object.values(tracks).filter(t => t.type === targetType).sort((a, b) => a.index - b.index);
+      const targetTrackId = availableTracks.length > 0 ? availableTracks[0].id : (isAudio ? 'a1' : 'v1');
 
       addClip({
         trackId: targetTrackId,

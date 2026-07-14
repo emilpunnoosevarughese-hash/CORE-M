@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useTimelineStore } from '@corem/timeline';
 import { AudioEngine } from '@corem/audio';
+import { MediaPool } from './engine/MediaPool';
 
 export type PlaybackQuality = 'auto' | 'proxy' | 'original' | 'low' | 'high';
 
@@ -41,12 +42,13 @@ export const usePlaybackStore = create<PlaybackState>((set, get) => ({
       get().play();
     } else {
       get().pause();
-    }
-  },
-
   play: () => {
     if (get().isPlaying) return;
     set({ isPlaying: true });
+    
+    // Unlock audio elements to bypass browser autoplay policy
+    MediaPool.unlockAudio();
+    
     // Start the synchronization loop bridging timeline playhead with actual time
     let ctx: AudioContext | null = null;
     try {

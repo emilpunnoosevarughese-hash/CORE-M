@@ -142,6 +142,7 @@ export function CloudProjectsPanel() {
       };
 
       const id = await createProject(settings.name, JSON.stringify(newState));
+      useTimelineStore.setState(newState);
       navigate(`/editor/${id}`);
     } catch (e: any) {
       console.error(e);

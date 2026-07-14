@@ -46,6 +46,17 @@ export function PrimaryControls() {
           </span>
         </div>
       ))}
+      <div className="pt-4 border-t border-border flex justify-end">
+        <button
+          onClick={() => {
+            const defaults = controls.reduce((acc, ctrl) => ({ ...acc, [ctrl.id]: ctrl.default }), {});
+            updatePrimaryParams(defaults);
+          }}
+          className="text-xs px-3 py-1.5 bg-surface-hover hover:bg-red-500/20 hover:text-red-400 text-foreground/70 rounded transition-colors"
+        >
+          Reset All
+        </button>
+      </div>
     </div>
   );
 }

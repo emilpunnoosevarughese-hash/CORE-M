@@ -208,6 +208,17 @@ export class MediaPool {
     this.audioElements.forEach(a => a.inUse = false);
   }
 
+  static unlockAudio() {
+    // Call this synchronously on user interaction (e.g. Play button click)
+    // to unlock audio contexts.
+    for (const [_, record] of this.audioElements.entries()) {
+      if (record.element.paused && record.element.readyState >= 2) {
+        record.element.play().catch(() => {});
+        record.element.pause(); // Just want to unlock it
+      }
+    }
+  }
+
   private static enforceLimits() {
     const profile = HardwareProfiler.getProfile();
     

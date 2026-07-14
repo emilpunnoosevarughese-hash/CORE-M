@@ -177,6 +177,21 @@ export function ColorWheels() {
         value={params.offset || [0,0,0]} 
         onChange={v => updatePrimaryParams({ offset: v })} 
       />
+      <div className="col-span-2 lg:col-span-4 flex justify-end w-full px-8 mt-4">
+        <button
+          onClick={() => {
+            updatePrimaryParams({
+              lift: [0, 0, 0],
+              gamma: [1, 1, 1],
+              gain: [1, 1, 1],
+              offset: [0, 0, 0]
+            });
+          }}
+          className="text-xs px-3 py-1.5 bg-surface-hover hover:bg-red-500/20 hover:text-red-400 text-foreground/70 rounded transition-colors"
+        >
+          Reset Wheels
+        </button>
+      </div>
     </div>
   );
 }

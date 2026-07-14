@@ -120,6 +120,7 @@ export function PreviewWindow() {
                import('@corem/playback').then(({ MediaPool }) => {
                  const audio = MediaPool.acquireAudio(clip.assetId, sourceUrl, priority);
                  if (audio && isIntersectingPlayhead) {
+                   audio.muted = track.muted || usePlaybackStore.getState().isMuted;
                    const audioTime = (frame - clip.start) / 30; // 30fps
                    if (state.playhead.isPlaying) {
                      if (audio.paused) {
@@ -215,8 +216,15 @@ export function PreviewWindow() {
                if (video.paused) {
                  if (!video.seeking) video.currentTime = videoTime;
                  video.play().catch(e => console.warn('Play prevented:', e));
-               } else if (Math.abs(video.currentTime - videoTime) > 0.5 && !video.seeking) {
-                 video.currentTime = videoTime;
+               } else {
+                 const diff = videoTime - video.currentTime;
+                 if (Math.abs(diff) > 1.0 && !video.seeking) {
+                   video.currentTime = videoTime;
+                 } else if (Math.abs(diff) > 0.1) {
+                   video.playbackRate = 1.0 + Math.max(-0.5, Math.min(0.5, diff * 2));
+                 } else {
+                   video.playbackRate = 1.0;
+                 }
                }
              } else {
                if (!video.paused) {
@@ -378,7 +386,14 @@ export function PreviewWindow() {
         {/* Safe Areas Overlay */}
         {showSafeAreas && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-            <div className="relative" style={{ aspectRatio: '16/9', height: '100%', maxWidth: '100%' }}>
+            <div 
+              className="relative" 
+              style={{ 
+                aspectRatio: `${activeSequence?.width || 1920}/${activeSequence?.height || 1080}`, 
+                height: '100%', 
+                maxWidth: '100%' 
+              }}
+            >
               <div className="absolute inset-[5%] border border-white/30" />
               <div className="absolute inset-[10%] border border-white/50" />
               <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
