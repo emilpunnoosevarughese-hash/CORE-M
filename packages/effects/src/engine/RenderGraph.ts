@@ -23,7 +23,13 @@ export interface RenderLayer {
   time?: number; // frame time for caching keys
 }
 
-export function createTransformMatrix(projectWidth: number, projectHeight: number, t: RenderLayer['transform']): Float32Array {
+export function createTransformMatrix(
+  projectWidth: number, 
+  projectHeight: number, 
+  t: RenderLayer['transform'], 
+  sourceWidth: number = projectWidth, 
+  sourceHeight: number = projectHeight
+): Float32Array {
   const mat = new Float32Array(16);
   mat[0] = 1; mat[5] = 1; mat[10] = 1; mat[15] = 1;
   
@@ -34,8 +40,21 @@ export function createTransformMatrix(projectWidth: number, projectHeight: numbe
   const c = Math.cos(rad);
   const s = Math.sin(rad);
   
-  const sx = t.scaleX;
-  const sy = t.scaleY;
+  const projectAspect = projectWidth / projectHeight;
+  const sourceAspect = sourceWidth / sourceHeight;
+  
+  let baseScaleX = 1.0;
+  let baseScaleY = 1.0;
+  
+  // Fit to screen by default while maintaining aspect ratio
+  if (sourceAspect > projectAspect) {
+     baseScaleY = projectAspect / sourceAspect;
+  } else {
+     baseScaleX = sourceAspect / projectAspect;
+  }
+  
+  const sx = t.scaleX * baseScaleX;
+  const sy = t.scaleY * baseScaleY;
 
   mat[12] = tx;
   mat[13] = ty;
@@ -246,7 +265,7 @@ export class RenderGraph {
           else if (u_blendMode == 8) { result = abs(cBase - cBlend); } // Difference
           else if (u_blendMode == 9) { result = cBase + cBlend - 2.0 * cBase * cBlend; } // Exclusion
           else if (u_blendMode == 10) { result = mix(min(cBase / max(1.0 - cBlend, 0.001), 1.0), vec3(1.0), step(1.0, cBlend)); } // Color Dodge
-          else if (u_blendMode == 11) { result = mix(max(1.0 - (1.0 - cBase) / max(cBlend, 0.001), 0.0), vec3(0.0), step(cBlend, 0.0)); } // Color Burn
+          else if (u_blendMode == 11) { result = mix(max(1.0 - (1.0 - cBase) / max(cBlend, 0.001), 0.0), vec3(0.0), step(cBlend, vec3(0.0))); } // Color Burn
           else if (u_blendMode == 12) { result = min(cBase + cBlend, 1.0); } // Linear Dodge
           else if (u_blendMode == 13) { result = max(cBase + cBlend - 1.0, 0.0); } // Linear Burn
           else if (u_blendMode >= 14) { // Hue, Saturation, Color, Luminosity
@@ -423,7 +442,13 @@ export class RenderGraph {
       
       // The transform properties are based on the project resolution (1920x1080), 
       // NOT the current preview canvas size (this.width x this.height)
-      const mat = createTransformMatrix(1920, 1080, layer.transform);
+      let sourceWidth = 1920;
+      let sourceHeight = 1080;
+      if (layer.source) {
+        sourceWidth = layer.source.width;
+        sourceHeight = layer.source.height;
+      }
+      const mat = createTransformMatrix(1920, 1080, layer.transform, sourceWidth, sourceHeight);
       this.gl.uniformMatrix4fv(this.gl.getUniformLocation(this.compProgram!, 'u_transform'), false, mat);
       
       this.drawFullscreenQuad(this.compProgram!);
