@@ -21,6 +21,18 @@ export interface RenderLayer {
   layers?: RenderLayer[]; 
   compositionId?: string;
   time?: number; // frame time for caching keys
+  
+  // Masking
+  mask?: {
+    type: 'ellipse' | 'rectangle';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    invert?: boolean;
+    feather?: number;
+    expansion?: number;
+  };
 }
 
 export function createTransformMatrix(
@@ -208,6 +220,9 @@ export class RenderGraph {
       uniform float u_opacity;
       uniform int u_blendMode;
       uniform vec2 u_resolution;
+      uniform int u_maskType;
+      uniform vec4 u_maskRect;
+      uniform vec3 u_maskParams;
       out vec4 outColor;
       
       vec3 rgb2hsl(vec3 c) {
@@ -243,7 +258,34 @@ export class RenderGraph {
           vec2 screenUV = gl_FragCoord.xy / u_resolution;
           vec4 base = texture(u_base, screenUV);
           vec4 blend = texture(u_blend, v_texCoord);
-          blend.a *= u_opacity;
+          
+          float maskAlpha = 1.0;
+          if (u_maskType > 0) {
+              vec2 maskCenter = u_maskRect.xy;
+              vec2 maskSize = u_maskRect.zw;
+              vec2 d = (v_texCoord - maskCenter) / max(maskSize, vec2(0.0001));
+              
+              float dist = 0.0;
+              if (u_maskType == 1) { // Rectangle
+                  vec2 rectD = abs(d) * 2.0;
+                  dist = max(rectD.x, rectD.y);
+              } else if (u_maskType == 2) { // Ellipse
+                  dist = length(d) * 2.0;
+              }
+              
+              float feather = u_maskParams.x / 100.0;
+              float edge0 = 1.0 - feather;
+              float edge1 = 1.0 + feather;
+              
+              maskAlpha = 1.0 - smoothstep(edge0, edge1, dist);
+              
+              if (u_maskParams.z > 0.5) {
+                  maskAlpha = 1.0 - maskAlpha;
+              }
+          }
+          
+          float effectiveOpacity = u_opacity * maskAlpha;
+          blend.a *= effectiveOpacity;
           
           vec3 cBase = base.a > 0.0 ? base.rgb / base.a : vec3(0.0);
           vec3 cBlend = blend.a > 0.0 ? blend.rgb / blend.a : vec3(0.0);
@@ -439,6 +481,15 @@ export class RenderGraph {
       this.gl.uniform1f(this.gl.getUniformLocation(this.compProgram!, 'u_opacity'), layer.opacity);
       this.gl.uniform1i(this.gl.getUniformLocation(this.compProgram!, 'u_blendMode'), this.getBlendModeInt(layer.blendMode));
       this.gl.uniform2f(this.gl.getUniformLocation(this.compProgram!, 'u_resolution'), this.width, this.height);
+      
+      // Mask Uniforms
+      if (layer.mask) {
+        this.gl.uniform1i(this.gl.getUniformLocation(this.compProgram!, 'u_maskType'), layer.mask.type === 'rectangle' ? 1 : layer.mask.type === 'ellipse' ? 2 : 0);
+        this.gl.uniform4f(this.gl.getUniformLocation(this.compProgram!, 'u_maskRect'), layer.mask.x, layer.mask.y, layer.mask.width, layer.mask.height);
+        this.gl.uniform3f(this.gl.getUniformLocation(this.compProgram!, 'u_maskParams'), layer.mask.feather || 0, layer.mask.expansion || 0, layer.mask.invert ? 1.0 : 0.0);
+      } else {
+        this.gl.uniform1i(this.gl.getUniformLocation(this.compProgram!, 'u_maskType'), 0);
+      }
       
       // The transform properties are based on the project resolution
       // NOT the current preview canvas size (this.width x this.height)

@@ -21,6 +21,8 @@ export function PrimaryControls() {
     { id: 'exposure', label: 'Exposure', min: -5, max: 5, step: 0.01, default: 0 },
     { id: 'contrast', label: 'Contrast', min: 0, max: 3, step: 0.01, default: 1 },
     { id: 'saturation', label: 'Saturation', min: 0, max: 3, step: 0.01, default: 1 },
+    { id: 'sharpen', label: 'Sharpen', min: 0, max: 100, step: 1, default: 0 },
+    { id: 'clarity', label: 'Clarity', min: -100, max: 100, step: 1, default: 0 },
   ];
 
   if (!clip) {

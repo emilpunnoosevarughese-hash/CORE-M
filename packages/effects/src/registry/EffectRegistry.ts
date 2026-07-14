@@ -107,6 +107,8 @@ export const EFFECTS: Record<string, EffectDefinition> = {
       { id: 'exposure', name: 'Exposure', type: 'float', defaultValue: 0.0, min: -5.0, max: 5.0, step: 0.01 },
       { id: 'contrast', name: 'Contrast', type: 'float', defaultValue: 1.0, min: 0.0, max: 3.0, step: 0.01 },
       { id: 'saturation', name: 'Saturation', type: 'float', defaultValue: 1.0, min: 0.0, max: 3.0, step: 0.01 },
+      { id: 'sharpen', name: 'Sharpen', type: 'float', defaultValue: 0.0, min: 0.0, max: 100.0, step: 1.0 },
+      { id: 'clarity', name: 'Clarity', type: 'float', defaultValue: 0.0, min: -100.0, max: 100.0, step: 1.0 },
       { id: 'lift', name: 'Lift', type: 'vec3', defaultValue: [0.0, 0.0, 0.0] },
       { id: 'gamma', name: 'Gamma', type: 'vec3', defaultValue: [1.0, 1.0, 1.0] },
       { id: 'gain', name: 'Gain', type: 'vec3', defaultValue: [1.0, 1.0, 1.0] },
@@ -119,6 +121,9 @@ export const EFFECTS: Record<string, EffectDefinition> = {
       uniform float u_exposure;
       uniform float u_contrast;
       uniform float u_saturation;
+      uniform float u_sharpen;
+      uniform float u_clarity;
+      uniform vec2 u_resolution;
       
       uniform vec3 u_lift;
       uniform vec3 u_gamma;
@@ -132,8 +137,32 @@ export const EFFECTS: Record<string, EffectDefinition> = {
       }
 
       void main() {
+        vec2 pixel = vec2(1.0) / u_resolution;
         vec4 color = texture2D(u_image, v_texCoord);
         vec3 rgb = color.rgb;
+        
+        // --- Sharpen / Clarity Pass ---
+        if (abs(u_sharpen) > 0.01 || abs(u_clarity) > 0.01) {
+            // Sample neighbors
+            vec3 N = texture2D(u_image, v_texCoord + vec2(0.0, -pixel.y)).rgb;
+            vec3 S = texture2D(u_image, v_texCoord + vec2(0.0, pixel.y)).rgb;
+            vec3 E = texture2D(u_image, v_texCoord + vec2(pixel.x, 0.0)).rgb;
+            vec3 W = texture2D(u_image, v_texCoord + vec2(-pixel.x, 0.0)).rgb;
+            
+            // Unsharp Mask approach for Sharpen
+            vec3 blur = (N + S + E + W) * 0.25;
+            vec3 detail = rgb - blur;
+            
+            // Sharpen amplifies fine detail
+            float s = u_sharpen / 100.0; // 0 to 1
+            rgb += detail * (s * 3.0);
+            
+            // Clarity amplifies midtone contrast using detail
+            float c = u_clarity / 100.0; // -1 to 1
+            float lum = dot(rgb, vec3(0.299, 0.587, 0.114));
+            float midtoneWeight = 1.0 - pow(2.0 * lum - 1.0, 2.0); // bell curve around 0.5
+            rgb += detail * (c * midtoneWeight * 2.0);
+        }
 
         // 1. Exposure
         rgb = rgb * pow(2.0, u_exposure);

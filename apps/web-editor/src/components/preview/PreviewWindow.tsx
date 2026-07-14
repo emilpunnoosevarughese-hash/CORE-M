@@ -71,18 +71,32 @@ export function PreviewWindow() {
     }
   }, []);
 
-  // Sync timeline → render worker
+  // Sync timeline → render worker via requestAnimationFrame to avoid spam
   useEffect(() => {
-    return useTimelineStore.subscribe((state) => {
+    let rafId: number;
+    let lastRenderedHash = '';
+    let isFetching = false;
+
+    const renderLoop = () => {
+      rafId = requestAnimationFrame(renderLoop);
+      if (isFetching) return; // Prevent overlapping frame fetches
+      
+      const state = useTimelineStore.getState();
       const frame = state.playhead.currentFrame;
+      
+      // Create a fast hash of relevant state to avoid redundant renders when paused
+      const currentHash = `${frame}-${state.activeSequenceId}-${state.tracks ? Object.keys(state.tracks).length : 0}-${state.clips ? JSON.stringify(Object.values(state.clips).map(c => c.effects?.length || 0 + c.transform.x + (c.effects?.[0]?.parameters?.intensity || 0))) : 0}`;
+      
+      if (!state.playhead.isPlaying && currentHash === lastRenderedHash) {
+        return;
+      }
+      lastRenderedHash = currentHash;
+
       if (workerRef.current) {
-        
         const activeSequence = state.sequences[state.activeSequenceId!];
         if (!activeSequence) return;
         
         const layers: any[] = [];
-        
-        // Evaluate all tracks (bottom to top)
         const orderedTracks = [...activeSequence.trackIds].reverse();
         
         for (const trackId of orderedTracks) {
@@ -90,8 +104,6 @@ export function PreviewWindow() {
           if (!track || track.hidden) continue;
           
           const isAudioTrack = track.type === 'audio';
-          
-          // Preload window: clips within [-300, +300] frames of playhead
           const preloadClips = track.clipIds
             .map(id => state.clips[id])
             .filter(c => c && frame >= c.start - 300 && frame < c.start + c.duration + 300);
@@ -100,7 +112,6 @@ export function PreviewWindow() {
             const asset = useAssetStore.getState().assets[clip.assetId];
             const playbackQuality = usePlaybackStore.getState().quality;
             
-            // Proxy selection logic
             let sourceUrl = asset?.sourceUrl;
             if ((playbackQuality === 'proxy' || playbackQuality === 'low') && asset?.previewUrl) {
                sourceUrl = asset.previewUrl;
@@ -110,18 +121,15 @@ export function PreviewWindow() {
             
             if (!sourceUrl) continue;
 
-            // Calculate rendering priority
             const isIntersectingPlayhead = frame >= clip.start && frame < clip.start + clip.duration;
             let priority = isIntersectingPlayhead ? 100 : 10;
-            // Additional priority boosts could be added here (e.g. selected, hovered)
 
             if (isAudioTrack || (asset && (asset.type === 'music' || asset.type === 'sfx'))) {
-               // Adaptive Media Pool for Audio
                import('@corem/playback').then(({ MediaPool }) => {
                  const audio = MediaPool.acquireAudio(clip.assetId, sourceUrl, priority);
                  if (audio && isIntersectingPlayhead) {
                    audio.muted = track.muted || usePlaybackStore.getState().isMuted;
-                   const audioTime = (frame - clip.start) / 30; // 30fps
+                   const audioTime = (frame - clip.start) / 30;
                    if (state.playhead.isPlaying) {
                      if (audio.paused) {
                        audio.currentTime = audioTime;
@@ -140,16 +148,13 @@ export function PreviewWindow() {
                continue;
             }
             
-            // For Video: only add to layers if it actively intersects the playhead to render
             if (!isIntersectingPlayhead) {
-               // Background preload only (Priority 10)
                import('@corem/playback').then(({ MediaPool }) => {
                   MediaPool.acquireVideo(clip.assetId, sourceUrl, priority);
                });
                continue;
             }
 
-            // Visual Track Logic (isIntersectingPlayhead is true)
             let currentTransform = { ...clip.transform };
             let pId = clip.parentId;
             while (pId) {
@@ -187,6 +192,7 @@ export function PreviewWindow() {
               blendMode: clip.blendMode,
               transform: currentTransform,
               effects: activeEffects,
+              mask: clip.mask,
               clipStart: clip.start,
               priority
             });
@@ -194,8 +200,8 @@ export function PreviewWindow() {
         }
         
         let anyLoading = false;
+        isFetching = true;
         
-        // Fetch frames dynamically
         const fetchFramePromises = layers.map(async (layer) => {
           if (layer.isAdjustmentLayer || !layer.sourceUrl) {
             return { ...layer, source: null };
@@ -204,14 +210,10 @@ export function PreviewWindow() {
           const { MediaPool } = await import('@corem/playback');
           const video = MediaPool.acquireVideo(layer.assetId, layer.sourceUrl, layer.priority);
           
-          if (!video) {
-            // Decoder budget exhausted, we could fallback to a FrameCache here
-            return { ...layer, source: null };
-          }
+          if (!video) return { ...layer, source: null };
           
           if (video.readyState >= 1) {
-             const videoTime = (frame - layer.clipStart) / 30; // 30fps
-             
+             const videoTime = (frame - layer.clipStart) / 30;
              if (state.playhead.isPlaying) {
                if (video.paused) {
                  if (!video.seeking) video.currentTime = videoTime;
@@ -227,10 +229,7 @@ export function PreviewWindow() {
                  }
                }
              } else {
-               if (!video.paused) {
-                 video.pause();
-               }
-               // Prevent infinite seeking if the browser clamps to a keyframe
+               if (!video.paused) video.pause();
                const lastSeek = video.dataset.lastSeekTarget ? parseFloat(video.dataset.lastSeekTarget) : -1;
                if (Math.abs(video.currentTime - videoTime) > 0.05 && !video.seeking && Math.abs(lastSeek - videoTime) > 0.01) {
                  video.dataset.lastSeekTarget = videoTime.toString();
@@ -243,7 +242,6 @@ export function PreviewWindow() {
                   const bitmap = await createImageBitmap(video);
                   return { ...layer, source: bitmap };
                } catch(e) {
-                  // Fallback for browsers/scenarios where createImageBitmap(video) fails
                   try {
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = video.videoWidth || 1920;
@@ -253,7 +251,6 @@ export function PreviewWindow() {
                     const bitmap = await createImageBitmap(tempCanvas);
                     return { ...layer, source: bitmap };
                   } catch(e2) {
-                    console.warn("createImageBitmap fallback failed", e2);
                     return { ...layer, source: null };
                   }
                }
@@ -262,11 +259,9 @@ export function PreviewWindow() {
           
           if (video.readyState < 2) {
              if (video.dataset.error === 'true') {
-               // Video failed to load. Do not flag as loading.
                return { ...layer, source: null, isError: true };
              }
              anyLoading = true;
-             // Not ready yet, attach events if not already listening
              if (!video.dataset.eventsAttached) {
                video.dataset.eventsAttached = 'true';
                const triggerUpdate = () => useTimelineStore.setState(s => ({ playhead: { ...s.playhead } }));
@@ -290,6 +285,9 @@ export function PreviewWindow() {
                payload: { layers: resolvedLayers, requestScopes: true, qualityScale: qualityRef.current, projectWidth: activeSeq?.width || 1920, projectHeight: activeSeq?.height || 1080 }
              }, resolvedLayers.map(l => l.source).filter(Boolean));
            }
+           isFetching = false;
+        }).catch(() => {
+           isFetching = false;
         });
         
         return;

@@ -58,6 +58,18 @@ export interface Clip {
   assetType?: 'media' | 'composition' | 'solid' | 'text' | 'shape' | 'light' | 'camera' | 'particle' | 'smart_object'; 
   transform: Transform;
   
+  // Masking
+  mask?: {
+    type: 'ellipse' | 'rectangle';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    invert?: boolean;
+    feather?: number;
+    expansion?: number;
+  };
+  
   // Audio specific
   audio?: AudioProperties;
   

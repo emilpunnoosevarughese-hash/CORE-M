@@ -24,6 +24,7 @@ import { CommentPanel } from '../components/cloud/CommentPanel';
 import { VersionHistoryPanel } from '../components/cloud/VersionHistoryPanel';
 import { ShareModal } from '../components/cloud/ShareModal';
 import { ProxyPromptModal } from '../components/dialogs/ProxyPromptModal';
+import { DeviceOptimizerModal } from '../components/dev/DeviceOptimizerModal';
 
 // Heavy modules (Lazy Loaded)
 const PluginMarketplace = lazy(() => import('../components/plugins/PluginMarketplace').then(m => ({ default: m.PluginMarketplace })));
@@ -48,6 +49,7 @@ export function EditorLayout() {
   const [showExport, setShowExport] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDeviceOptimizer, setShowDeviceOptimizer] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('corem_tutorial_seen'));
   const { isMarketplaceOpen, isPluginManagerOpen, toggleMarketplace, togglePluginManager } = usePluginStore();
   const { saveProject, isSaving, savedPath } = useSaveProject(projectId || 'untitled');
@@ -112,6 +114,13 @@ export function EditorLayout() {
             title="Settings (Dark Theme & more)"
           >
             <Settings size={16} />
+          </button>
+          <button
+            onClick={() => setShowDeviceOptimizer(true)}
+            className="p-1.5 hover:bg-surface-hover rounded-md text-yellow-500/80 hover:text-yellow-500 transition-colors"
+            title="Optimize Performance"
+          >
+            <Zap size={16} />
           </button>
           <button
             onClick={() => setShowTutorial(true)}
@@ -224,7 +233,6 @@ export function EditorLayout() {
                 </div>
                 <div className="flex-1 overflow-y-auto min-h-0">
                   <EffectsLibraryPanel />
-                  {/* Embedded Chroma Key Controls in Effects Panel for now */}
                   <div className="p-4 bg-background border border-border rounded-lg m-4 mt-0">
                     <h4 className="text-sm font-semibold mb-4 text-green-500">Chroma Key</h4>
                     <ChromaKeyControls />
@@ -240,17 +248,19 @@ export function EditorLayout() {
             {activeTab === 'comments'    && projectId && <CommentPanel projectId={projectId} />}
             {activeTab === 'versions'    && projectId && <VersionHistoryPanel projectId={projectId} />}
           </Suspense>
+          
+          {/* Audio Mixer anchored at the bottom of the sidebar */}
+          {showMixer && (
+            <div className="mt-auto h-64 shrink-0 border-t border-border bg-background shadow-[0_-5px_15px_rgba(0,0,0,0.2)]">
+              <AudioMixerPanel />
+            </div>
+          )}
         </aside>
 
         {/* Center: Preview + Timeline stacked, fills remaining space */}
         <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           <PreviewWindow />
           <TimelineContainer />
-          {showMixer && (
-            <div className="h-56 shrink-0 border-t border-border">
-              <AudioMixerPanel />
-            </div>
-          )}
         </main>
 
         {/* Inspector Panel */}
@@ -284,6 +294,7 @@ export function EditorLayout() {
         {showRecorder && <VoiceRecorderDialog isOpen={showRecorder} onClose={() => setShowRecorder(false)} />}
         {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
         {showTutorial && <TutorialOverlay onClose={() => { setShowTutorial(false); localStorage.setItem('corem_tutorial_seen', 'true'); }} />}
+        {showDeviceOptimizer && <DeviceOptimizerModal onClose={() => setShowDeviceOptimizer(false)} />}
       </Suspense>
 
       <ProxyPromptModal />
