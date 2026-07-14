@@ -4,7 +4,7 @@
   "description": "GPU-powered professional effects, compositing, and color grading engine for CORE M",
   "main": "src/index.ts",
   "dependencies": {
-    "@corem/animation": "workspace:*",
-    "@corem/timeline": "workspace:*"
+    "@corem/animation": "*",
+    "@corem/timeline": "*"
   }
 }

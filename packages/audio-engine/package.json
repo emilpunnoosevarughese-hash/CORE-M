@@ -4,7 +4,7 @@
   "description": "Professional non-linear audio engine, mixer, and sound design system for CORE M",
   "main": "src/index.ts",
   "dependencies": {
-    "@corem/animation": "workspace:*",
-    "@corem/timeline": "workspace:*"
+    "@corem/animation": "*",
+    "@corem/timeline": "*"
   }
 }
