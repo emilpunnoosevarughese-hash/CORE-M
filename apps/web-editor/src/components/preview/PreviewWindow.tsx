@@ -124,27 +124,32 @@ export function PreviewWindow() {
             const isIntersectingPlayhead = frame >= clip.start && frame < clip.start + clip.duration;
             let priority = isIntersectingPlayhead ? 100 : 10;
 
+            // Acquire audio for all assets (video, music, sfx)
+            import('@corem/playback').then(({ MediaPool }) => {
+              const audio = MediaPool.acquireAudio(clip.assetId, sourceUrl, priority);
+              if (audio && isIntersectingPlayhead) {
+                audio.muted = track.muted || usePlaybackStore.getState().isMuted;
+                // Base volume mapped from track volume property (assuming 0 to 1, default 1)
+                audio.volume = track.volume !== undefined ? track.volume : 1.0;
+                
+                const audioTime = (frame - clip.start) / 30;
+                if (state.playhead.isPlaying) {
+                  if (audio.paused) {
+                    audio.currentTime = audioTime;
+                    audio.play().catch(() => {});
+                  } else if (Math.abs(audio.currentTime - audioTime) > 0.5) {
+                    audio.currentTime = audioTime;
+                  }
+                } else {
+                  if (!audio.paused) audio.pause();
+                  if (Math.abs(audio.currentTime - audioTime) > 0.05) {
+                    audio.currentTime = audioTime;
+                  }
+                }
+              }
+            });
+
             if (isAudioTrack || (asset && (asset.type === 'music' || asset.type === 'sfx'))) {
-               import('@corem/playback').then(({ MediaPool }) => {
-                 const audio = MediaPool.acquireAudio(clip.assetId, sourceUrl, priority);
-                 if (audio && isIntersectingPlayhead) {
-                   audio.muted = track.muted || usePlaybackStore.getState().isMuted;
-                   const audioTime = (frame - clip.start) / 30;
-                   if (state.playhead.isPlaying) {
-                     if (audio.paused) {
-                       audio.currentTime = audioTime;
-                       audio.play().catch(() => {});
-                     } else if (Math.abs(audio.currentTime - audioTime) > 0.5) {
-                       audio.currentTime = audioTime;
-                     }
-                   } else {
-                     if (!audio.paused) audio.pause();
-                     if (Math.abs(audio.currentTime - audioTime) > 0.05) {
-                       audio.currentTime = audioTime;
-                     }
-                   }
-                 }
-               });
                continue;
             }
             

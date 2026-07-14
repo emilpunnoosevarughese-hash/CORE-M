@@ -183,6 +183,22 @@ export class MediaPool {
       console.error(`MediaPool: Failed to load audio asset ${assetId} from ${sourceUrl}`, audio.error);
     };
     document.body.appendChild(audio);
+
+    // Connect to AudioEngine Master Bus
+    try {
+      // Need to dynamically import to avoid circular dep if any, or just use the global
+      import('@corem/audio').then(({ AudioEngine }) => {
+        const engine = AudioEngine.getInstance();
+        const ctx = engine.getContext();
+        const master = engine.getMasterNode();
+        if (ctx && master) {
+          const source = ctx.createMediaElementSource(audio);
+          source.connect(master);
+        }
+      });
+    } catch(e) {
+      console.warn("Failed to connect audio to master bus", e);
+    }
     
     this.audioElements.set(assetId, {
       id: assetId,
