@@ -23,12 +23,13 @@ export interface RenderLayer {
   time?: number; // frame time for caching keys
 }
 
-export function createTransformMatrix(width: number, height: number, t: RenderLayer['transform']): Float32Array {
+export function createTransformMatrix(projectWidth: number, projectHeight: number, t: RenderLayer['transform']): Float32Array {
   const mat = new Float32Array(16);
   mat[0] = 1; mat[5] = 1; mat[10] = 1; mat[15] = 1;
   
-  const tx = (t.x / width) * 2.0;
-  const ty = -(t.y / height) * 2.0;
+  // Convert pixel coordinates (0 to width/height) to NDC space (-1 to 1)
+  const tx = (t.x / projectWidth) * 2.0 - 1.0;
+  const ty = 1.0 - (t.y / projectHeight) * 2.0;
   const rad = -t.rotation * (Math.PI / 180);
   const c = Math.cos(rad);
   const s = Math.sin(rad);
@@ -413,7 +414,9 @@ export class RenderGraph {
       this.gl.uniform1i(this.gl.getUniformLocation(this.compProgram!, 'u_blendMode'), this.getBlendModeInt(layer.blendMode));
       this.gl.uniform2f(this.gl.getUniformLocation(this.compProgram!, 'u_resolution'), this.width, this.height);
       
-      const mat = createTransformMatrix(this.width, this.height, layer.transform);
+      // The transform properties are based on the project resolution (1920x1080), 
+      // NOT the current preview canvas size (this.width x this.height)
+      const mat = createTransformMatrix(1920, 1080, layer.transform);
       this.gl.uniformMatrix4fv(this.gl.getUniformLocation(this.compProgram!, 'u_transform'), false, mat);
       
       this.drawFullscreenQuad(this.compProgram!);
