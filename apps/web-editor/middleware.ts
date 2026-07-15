@@ -88,8 +88,8 @@ export function middleware(request: NextRequest) {
   response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
   
   // Note: COOP/COEP require credentialless/same-origin-allow-popups for Firebase Auth 
-  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-  response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
+  // response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  // response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
 
   return response;
 }
