@@ -102,16 +102,23 @@ export const EFFECTS: Record<string, EffectDefinition> = {
     description: 'Professional lift, gamma, gain and primary color adjustments',
     category: 'Color',
     parameters: [
-      { id: 'temperature', name: 'Temperature', type: 'float', defaultValue: 0.0, min: -1.0, max: 1.0, step: 0.01 },
-      { id: 'tint', name: 'Tint', type: 'float', defaultValue: 0.0, min: -1.0, max: 1.0, step: 0.01 },
-      { id: 'exposure', name: 'Exposure', type: 'float', defaultValue: 0.0, min: -5.0, max: 5.0, step: 0.01 },
-      { id: 'contrast', name: 'Contrast', type: 'float', defaultValue: 1.0, min: 0.0, max: 3.0, step: 0.01 },
-      { id: 'saturation', name: 'Saturation', type: 'float', defaultValue: 1.0, min: 0.0, max: 3.0, step: 0.01 },
-      { id: 'sharpen', name: 'Sharpen', type: 'float', defaultValue: 0.0, min: 0.0, max: 100.0, step: 1.0 },
-      { id: 'clarity', name: 'Clarity', type: 'float', defaultValue: 0.0, min: -100.0, max: 100.0, step: 1.0 },
-      { id: 'lift', name: 'Lift', type: 'vec3', defaultValue: [0.0, 0.0, 0.0] },
-      { id: 'gamma', name: 'Gamma', type: 'vec3', defaultValue: [1.0, 1.0, 1.0] },
-      { id: 'gain', name: 'Gain', type: 'vec3', defaultValue: [1.0, 1.0, 1.0] },
+      { id: 'temperature', name: 'Temperature', type: 'float', defaultValue: 0.0,  min: -1.0,  max: 1.0,   step: 0.01 },
+      { id: 'tint',        name: 'Tint',        type: 'float', defaultValue: 0.0,  min: -1.0,  max: 1.0,   step: 0.01 },
+      { id: 'exposure',    name: 'Exposure',    type: 'float', defaultValue: 0.0,  min: -5.0,  max: 5.0,   step: 0.01 },
+      { id: 'contrast',    name: 'Contrast',    type: 'float', defaultValue: 1.0,  min: 0.0,   max: 3.0,   step: 0.01 },
+      { id: 'highlights',  name: 'Highlights',  type: 'float', defaultValue: 0.0,  min: -0.5,  max: 0.5,   step: 0.01 },
+      { id: 'shadows',     name: 'Shadows',     type: 'float', defaultValue: 0.0,  min: -0.5,  max: 0.5,   step: 0.01 },
+      { id: 'whites',      name: 'Whites',      type: 'float', defaultValue: 0.0,  min: -0.5,  max: 0.5,   step: 0.01 },
+      { id: 'blacks',      name: 'Blacks',      type: 'float', defaultValue: 0.0,  min: -0.5,  max: 0.5,   step: 0.01 },
+      { id: 'saturation',  name: 'Saturation',  type: 'float', defaultValue: 1.0,  min: 0.0,   max: 3.0,   step: 0.01 },
+      { id: 'vibrance',    name: 'Vibrance',    type: 'float', defaultValue: 0.0,  min: -1.0,  max: 1.0,   step: 0.01 },
+      { id: 'sharpen',     name: 'Sharpen',     type: 'float', defaultValue: 0.0,  min: 0.0,   max: 100.0, step: 1.0  },
+      { id: 'clarity',     name: 'Clarity',     type: 'float', defaultValue: 0.0,  min: -100.0,max: 100.0, step: 1.0  },
+      { id: 'dehaze',      name: 'Dehaze',      type: 'float', defaultValue: 0.0,  min: -0.5,  max: 0.5,   step: 0.01 },
+      { id: 'vignette',    name: 'Vignette',    type: 'float', defaultValue: 0.0,  min: -1.0,  max: 1.0,   step: 0.01 },
+      { id: 'lift',   name: 'Lift',   type: 'vec3', defaultValue: [0.0, 0.0, 0.0] },
+      { id: 'gamma',  name: 'Gamma',  type: 'vec3', defaultValue: [1.0, 1.0, 1.0] },
+      { id: 'gain',   name: 'Gain',   type: 'vec3', defaultValue: [1.0, 1.0, 1.0] },
       { id: 'offset', name: 'Offset', type: 'vec3', defaultValue: [0.0, 0.0, 0.0] }
     ],
     fragmentShader: `
@@ -120,82 +127,106 @@ export const EFFECTS: Record<string, EffectDefinition> = {
       uniform float u_tint;
       uniform float u_exposure;
       uniform float u_contrast;
+      uniform float u_highlights;
+      uniform float u_shadows;
+      uniform float u_whites;
+      uniform float u_blacks;
       uniform float u_saturation;
+      uniform float u_vibrance;
       uniform float u_sharpen;
       uniform float u_clarity;
+      uniform float u_dehaze;
+      uniform float u_vignette;
       uniform vec2 u_resolution;
-      
       uniform vec3 u_lift;
       uniform vec3 u_gamma;
       uniform vec3 u_gain;
       uniform vec3 u_offset;
 
-      // Color Temperature to RGB conversion approximation
-      vec3 getTemperatureColor(float t) {
-          // Simplistic temp/tint adjustment mapping
-          return vec3(1.0 + t, 1.0, 1.0 - t); 
-      }
-
       void main() {
         vec2 pixel = vec2(1.0) / u_resolution;
         vec4 color = texture2D(u_image, v_texCoord);
         vec3 rgb = color.rgb;
-        
-        // --- Sharpen / Clarity Pass ---
+
+        // --- Sharpen / Clarity ---
         if (abs(u_sharpen) > 0.01 || abs(u_clarity) > 0.01) {
-            // Sample neighbors
-            vec3 N = texture2D(u_image, v_texCoord + vec2(0.0, -pixel.y)).rgb;
-            vec3 S = texture2D(u_image, v_texCoord + vec2(0.0, pixel.y)).rgb;
-            vec3 E = texture2D(u_image, v_texCoord + vec2(pixel.x, 0.0)).rgb;
-            vec3 W = texture2D(u_image, v_texCoord + vec2(-pixel.x, 0.0)).rgb;
-            
-            // Unsharp Mask approach for Sharpen
-            vec3 blur = (N + S + E + W) * 0.25;
-            vec3 detail = rgb - blur;
-            
-            // Sharpen amplifies fine detail
-            float s = u_sharpen / 100.0; // 0 to 1
-            rgb += detail * (s * 3.0);
-            
-            // Clarity amplifies midtone contrast using detail
-            float c = u_clarity / 100.0; // -1 to 1
-            float lum = dot(rgb, vec3(0.299, 0.587, 0.114));
-            float midtoneWeight = 1.0 - pow(2.0 * lum - 1.0, 2.0); // bell curve around 0.5
-            rgb += detail * (c * midtoneWeight * 2.0);
+          vec3 N = texture2D(u_image, v_texCoord + vec2(0.0, -pixel.y)).rgb;
+          vec3 S = texture2D(u_image, v_texCoord + vec2(0.0,  pixel.y)).rgb;
+          vec3 E = texture2D(u_image, v_texCoord + vec2( pixel.x, 0.0)).rgb;
+          vec3 W = texture2D(u_image, v_texCoord + vec2(-pixel.x, 0.0)).rgb;
+          vec3 blur = (N + S + E + W) * 0.25;
+          vec3 detail = rgb - blur;
+          float s = u_sharpen / 100.0;
+          rgb += detail * (s * 3.0);
+          float c = u_clarity / 100.0;
+          float lum0 = dot(rgb, vec3(0.299, 0.587, 0.114));
+          float midtoneWeight = 1.0 - pow(2.0 * lum0 - 1.0, 2.0);
+          rgb += detail * (c * midtoneWeight * 2.0);
         }
 
         // 1. Exposure
         rgb = rgb * pow(2.0, u_exposure);
 
-        // 2. Temp & Tint
-        vec3 balance = vec3(1.0 + u_temperature, 1.0 + u_tint, 1.0 - u_temperature);
-        rgb *= balance;
+        // 2. Temperature & Tint
+        rgb *= vec3(1.0 + u_temperature, 1.0 + u_tint * 0.5, 1.0 - u_temperature);
 
-        // 3. Contrast
+        // 3. Contrast (S-curve around 0.5)
         rgb = (rgb - 0.5) * u_contrast + 0.5;
 
-        // 4. CDL (Lift, Gamma, Gain, Offset)
-        // Gain
+        // 4. Tone range adjustments (luma-based)
+        float lum = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+        // Highlights: affect bright areas (lum > 0.6)
+        float hiMask = smoothstep(0.4, 1.0, lum);
+        rgb += u_highlights * hiMask;
+        // Shadows: affect dark areas (lum < 0.4)
+        float shMask = 1.0 - smoothstep(0.0, 0.6, lum);
+        rgb += u_shadows * shMask;
+        // Whites: boost very bright clipping
+        float whMask = smoothstep(0.7, 1.0, lum);
+        rgb += u_whites * whMask;
+        // Blacks: crush very dark areas
+        float blMask = 1.0 - smoothstep(0.0, 0.3, lum);
+        rgb += u_blacks * blMask;
+
+        // 5. Dehaze (basic haze removal / addition via atmosphere lifting)
+        rgb = mix(rgb, rgb * (1.0 + u_dehaze * 0.5), abs(u_dehaze));
+
+        // 6. CDL — Gain, Lift, Offset, Gamma
         rgb = rgb * u_gain;
-        
-        // Lift
         rgb = rgb + u_lift * (1.0 - rgb);
-
-        // Offset
         rgb = rgb + u_offset;
-
-        // Gamma (Power function)
-        rgb = max(rgb, vec3(0.0)); // Prevent NaNs from negative values
+        rgb = max(rgb, vec3(0.0));
         rgb = pow(rgb, 1.0 / max(u_gamma, vec3(0.0001)));
 
-        // 5. Saturation
-        float luminance = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
-        rgb = mix(vec3(luminance), rgb, u_saturation);
+        // 7. Saturation
+        float lum2 = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+        rgb = mix(vec3(lum2), rgb, u_saturation);
+
+        // 8. Vibrance (smart saturation — boosts less-saturated colors more)
+        float maxC = max(rgb.r, max(rgb.g, rgb.b));
+        float minC = min(rgb.r, min(rgb.g, rgb.b));
+        float sat = maxC - minC;
+        float vibFactor = u_vibrance * (1.0 - sat);
+        float lum3 = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+        rgb = mix(vec3(lum3), rgb, 1.0 + vibFactor);
+
+        // 9. Vignette
+        if (abs(u_vignette) > 0.001) {
+          vec2 uv = v_texCoord - 0.5;
+          float vignDist = dot(uv, uv);
+          float vignMask = smoothstep(0.1, 0.75, vignDist);
+          if (u_vignette > 0.0) {
+            rgb = mix(rgb, rgb * (1.0 - vignMask), u_vignette);
+          } else {
+            rgb = mix(rgb, min(rgb + vignMask * 0.5, vec3(1.0)), -u_vignette);
+          }
+        }
 
         gl_FragColor = vec4(clamp(rgb, 0.0, 1.0), color.a);
       }
     `
   },
+
   'lut3d': {
     id: 'lut3d',
     name: '3D LUT',
