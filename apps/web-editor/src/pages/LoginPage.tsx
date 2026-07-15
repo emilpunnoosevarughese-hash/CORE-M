@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, authProviders } from '@corem/cloud';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle, Info } from 'lucide-react';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { user, isInitializing } = useAuthStore();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  
+  // Store both simple message and diagnostic detail
+  const [errorInfo, setErrorInfo] = useState<{ message: string, code?: string, detail?: string } | null>(null);
 
   // If already logged in, redirect to dashboard in useEffect
   React.useEffect(() => {
@@ -18,48 +20,34 @@ export function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    setError('');
+    setErrorInfo(null);
     try {
       await authProviders.loginWithGoogle();
       navigate('/dashboard');
     } catch (e: any) {
-      setError(e.message);
+      setErrorInfo({ 
+        message: e.message || 'Login failed.', 
+        code: e.code, 
+        detail: e.technicalDetails 
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAnonLogin = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      await authProviders.loginAnonymously();
-      navigate('/dashboard');
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBypass = () => {
-    // For development, mock a user
-    useAuthStore.setState({ 
-      user: { uid: 'dev-user-123', email: 'dev@local' } as any,
-      isAuthenticated: true,
-      isInitializing: false 
-    });
-    navigate('/dashboard');
-  };
-
-  // Fallback timeout: if loading takes more than 4 seconds, force-disable initializing so user can see errors or retry
+  // Fallback timeout: if loading takes more than 5 seconds, force-disable initializing so user can see errors or retry
   React.useEffect(() => {
     const timer = setTimeout(() => {
       if (isInitializing) {
         console.warn('Firebase auth initialization timed out. Forcing UI load.');
         useAuthStore.setState({ isInitializing: false });
+        setErrorInfo({
+          message: 'Firebase Initialization Timeout.',
+          code: 'timeout',
+          detail: 'The authentication service took too long to respond. This might be due to a blocked network request or an incorrect configuration.'
+        });
       }
-    }, 4000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [isInitializing]);
 
@@ -80,7 +68,41 @@ export function LoginPage() {
           <p className="text-foreground/60 text-sm">Professional video editing, anywhere.</p>
         </div>
         
-        {error && <div className="mb-4 p-3 bg-red-500/10 text-red-500 rounded text-sm">{error}</div>}
+        {errorInfo && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg space-y-2">
+            <div className="flex items-start gap-2 text-red-500">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="text-sm font-medium">{errorInfo.message}</div>
+            </div>
+            
+            {/* Advanced Diagnostics Toggle/Display for admins troubleshooting */}
+            {(errorInfo.code || errorInfo.detail) && (
+              <details className="mt-2 text-xs text-red-400/80 cursor-pointer group">
+                <summary className="font-semibold select-none group-hover:text-red-400 transition-colors">
+                  View Technical Diagnostics
+                </summary>
+                <div className="mt-2 p-2 bg-black/20 rounded border border-red-500/10 space-y-1 font-mono break-all">
+                  {errorInfo.code && <div><span className="opacity-50">Error Code:</span> {errorInfo.code}</div>}
+                  {errorInfo.detail && <div><span className="opacity-50">Details:</span> {errorInfo.detail}</div>}
+                  
+                  {/* Actionable advice based on code */}
+                  {errorInfo.code === 'auth/unauthorized-domain' && (
+                    <div className="mt-2 pt-2 border-t border-red-500/10 text-amber-500/90 flex items-start gap-1.5">
+                      <Info className="w-4 h-4 shrink-0" />
+                      <span>Action: Add {window.location.hostname} to the Authorized Domains list in your Firebase Console (Authentication &gt; Settings &gt; Authorized domains).</span>
+                    </div>
+                  )}
+                  {errorInfo.code === 'auth/invalid-api-key' && (
+                    <div className="mt-2 pt-2 border-t border-red-500/10 text-amber-500/90 flex items-start gap-1.5">
+                      <Info className="w-4 h-4 shrink-0" />
+                      <span>Action: Verify your VITE_FIREBASE_API_KEY environment variable.</span>
+                    </div>
+                  )}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
 
         <div className="space-y-4">
           <button
@@ -92,26 +114,7 @@ export function LoginPage() {
             Continue with Google
           </button>
           
-          <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-border"></div>
-            <span className="flex-shrink-0 mx-4 text-foreground/40 text-xs">or</span>
-            <div className="flex-grow border-t border-border"></div>
-          </div>
-          
-          <button
-            onClick={handleAnonLogin}
-            disabled={loading}
-            className="w-full flex items-center justify-center px-4 py-2.5 bg-surface-hover text-foreground font-semibold rounded-lg hover:bg-surface-hover/80 transition-colors border border-border disabled:opacity-50"
-          >
-            Continue as Guest
-          </button>
-          
-          <button
-            onClick={handleBypass}
-            className="w-full mt-4 flex items-center justify-center px-4 py-2.5 bg-red-500/10 text-red-500 font-semibold rounded-lg hover:bg-red-500/20 transition-colors border border-red-500/20"
-          >
-            Skip Login (Dev Mode)
-          </button>
+          {/* Skip Login (Dev Mode) and Guest Login have been permanently removed for production security */}
         </div>
       </div>
     </div>

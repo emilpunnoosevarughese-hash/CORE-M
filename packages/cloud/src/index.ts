@@ -18,6 +18,9 @@ export * from './collaboration/presenceStore';
 export * from './collaboration/cursorStore';
 export * from './collaboration/selectionStore';
 
+// Security
+export * from './security/trustedTypes';
+
 // Comments
 export * from './comments/commentTypes';
 export * from './comments/commentStore';

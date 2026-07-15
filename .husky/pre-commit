@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running Security Pre-commit Hooks..."
+
+# 1. Run gitleaks (assume it's installed globally or available in PATH)
+if command -v gitleaks >/dev/null 2>&1; then
+  echo "Running gitleaks..."
+  gitleaks protect --staged
+  if [ $? -ne 0 ]; then
+    echo "❌ SECURITY ERROR: Secrets detected by gitleaks. Commit aborted."
+    exit 1
+  fi
+else
+  echo "⚠️ WARNING: gitleaks not found. Skipping secret detection. Please install gitleaks: https://github.com/gitleaks/gitleaks"
+fi
+
+# 2. Run lint-staged (runs oxlint on staged files)
+cd "apps/web-editor" && npx lint-staged

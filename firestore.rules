@@ -2,13 +2,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function
+    // Core Auth Helpers
     function isSignedIn() {
       return request.auth != null;
     }
+    function isOwner(resourceData) {
+      return isSignedIn() && resourceData.ownerId == request.auth.uid;
+    }
+    function isCollaborator(resourceData) {
+      return isSignedIn() && (
+        resourceData.ownerId == request.auth.uid || 
+        (resourceData.members != null && request.auth.uid in resourceData.members)
+      );
+    }
+
+    // Role verification against Firestore map { uid: 'editor' | 'viewer' }
+    function hasRole(resourceData, requiredRole) {
+      if (!isCollaborator(resourceData)) return false;
+      if (isOwner(resourceData)) return true; // Owner has all permissions
+      let userRole = resourceData.roles[request.auth.uid];
+      if (requiredRole == 'viewer') return userRole in ['viewer', 'editor', 'admin'];
+      if (requiredRole == 'editor') return userRole in ['editor', 'admin'];
+      if (requiredRole == 'admin') return userRole == 'admin';
+      return false;
+    }
+
+    // Rate Limiting (Simulated via timestamp check if required, else handled by Edge/AppCheck)
+    
+    // Validate string length (Input Validation Phase 10)
+    function isValidString(str, minLen, maxLen) {
+      return str is string && str.size() >= minLen && str.size() <= maxLen;
+    }
 
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn(); // Allow reading profiles for collaboration
+      allow write: if isSignedIn() && request.auth.uid == userId
+                   && (!request.resource.data.keys().hasAny(['roles', 'isAdmin'])) // Prevent self-elevation
+                   && isValidString(request.resource.data.displayName, 1, 50);
       
       match /notifications/{notificationId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
@@ -16,37 +46,53 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      // Allow read if user is owner (in real app, we'd check members array)
-      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      // Read allowed if Owner, Admin, Editor, Viewer
+      allow read: if isCollaborator(resource.data);
       
-      // Allow create if user sets themselves as owner
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      // Create allowed if auth matches ownerId and basic schema validation passes
+      allow create: if isSignedIn() 
+                    && request.resource.data.ownerId == request.auth.uid
+                    && isValidString(request.resource.data.name, 1, 100);
       
-      // Allow update/delete if owner
-      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      // Update allowed if Owner or Editor
+      allow update: if (isOwner(resource.data) || hasRole(resource.data, 'editor'))
+                    // Prevent transferring ownership or tampering with roles unless admin/owner
+                    && (isOwner(resource.data) || (
+                       request.resource.data.ownerId == resource.data.ownerId 
+                       && request.resource.data.roles == resource.data.roles
+                    ));
+      
+      // Delete strictly requires Owner
+      allow delete: if isOwner(resource.data);
 
       match /comments/{commentId} {
-        allow read: if isSignedIn(); // In real app, only if user can read project
-        allow create: if isSignedIn();
+        allow read: if isCollaborator(get(/databases/$(database)/documents/projects/$(projectId)).data);
+        allow create: if isSignedIn() 
+                      && isCollaborator(get(/databases/$(database)/documents/projects/$(projectId)).data)
+                      && request.resource.data.authorId == request.auth.uid
+                      && isValidString(request.resource.data.text, 1, 1000);
         allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
       }
 
       match /versions/{versionId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
+        allow read: if isCollaborator(get(/databases/$(database)/documents/projects/$(projectId)).data);
+        // Only Editors and above can save versions
+        allow create: if hasRole(get(/databases/$(database)/documents/projects/$(projectId)).data, 'editor');
       }
     }
 
     match /workspaces/{workspaceId} {
-      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow read: if isCollaborator(resource.data);
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data);
     }
 
     match /shareLinks/{linkId} {
-      allow read: if true; // Public links can be read by anyone to resolve
-      allow create: if isSignedIn();
-      allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
+      // Public links can be read to resolve project IDs, but only valid ones
+      allow read: if resource.data.expiresAt > request.time;
+      // Only owners/admins can generate share links
+      allow create: if hasRole(get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data, 'admin');
+      allow delete: if hasRole(get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data, 'admin');
     }
   }
 }

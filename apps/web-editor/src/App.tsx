@@ -48,9 +48,9 @@ const EditorLayout = lazy(() => import('./layouts/EditorLayout').then(m => ({ de
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout').then(m => ({ default: m.DashboardLayout })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const ColorWorkspace = lazy(() => import('./components/color/ColorWorkspace').then(m => ({ default: m.ColorWorkspace })));
+const AdminDiagnostics = lazy(() => import('./pages/AdminDiagnostics').then(m => ({ default: m.AdminDiagnostics })));
 
-// Lazy load diagnostics panel
-const DiagnosticsPanel = lazy(() => import('./components/dev/DiagnosticsPanel').then(m => ({ default: m.DiagnosticsPanel })));
+const RequireAuth = lazy(() => import('./components/auth/RequireAuth').then(m => ({ default: m.RequireAuth })));
 
 const LoadingFallback = () => (
   <div className="h-screen w-screen flex items-center justify-center bg-[#0a0a0a]">
@@ -60,7 +60,6 @@ const LoadingFallback = () => (
 
 function App() {
   const { detectPerformance } = usePerformanceStore();
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   // Theme initialization — respect saved preference, default to dark
   useEffect(() => {
@@ -74,33 +73,33 @@ function App() {
     detectPerformance();
   }, [detectPerformance]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Toggle diagnostics on Ctrl+Shift+D (or Cmd+Shift+D)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
-        e.preventDefault();
-        setShowDiagnostics(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   return (
     <ErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
-        {showDiagnostics && (
-          <Suspense fallback={null}>
-            <DiagnosticsPanel />
-          </Suspense>
-        )}
         <Router>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/dashboard/*" element={<DashboardLayout />} />
-            <Route path="/editor/:projectId" element={<EditorLayout />} />
-            <Route path="/editor/:projectId/color" element={<ColorWorkspace />} />
+            <Route path="/dashboard/admin/diagnostics" element={
+              <RequireAuth>
+                <AdminDiagnostics />
+              </RequireAuth>
+            } />
+            <Route path="/dashboard/*" element={
+              <RequireAuth>
+                <DashboardLayout />
+              </RequireAuth>
+            } />
+            <Route path="/editor/:projectId" element={
+              <RequireAuth>
+                <EditorLayout />
+              </RequireAuth>
+            } />
+            <Route path="/editor/:projectId/color" element={
+              <RequireAuth>
+                <ColorWorkspace />
+              </RequireAuth>
+            } />
             <Route path="*" element={<div className="h-screen w-screen flex items-center justify-center">404 - Not Found</div>} />
           </Routes>
         </Router>
