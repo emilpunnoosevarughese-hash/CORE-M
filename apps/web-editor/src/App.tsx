@@ -78,6 +78,13 @@ function App() {
     detectPerformance();
   }, [detectPerformance]);
 
+  useEffect(() => {
+    // Rehydrate local files from IndexedDB asynchronously
+    import('./components/assets/useAssetStore').then(({ useAssetStore }) => {
+      useAssetStore.getState().initLocalAssets();
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>

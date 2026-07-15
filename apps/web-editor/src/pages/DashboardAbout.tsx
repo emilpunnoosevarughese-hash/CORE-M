@@ -7,7 +7,7 @@ export function DashboardAbout() {
       <h1 className="text-3xl font-bold mb-8">About CORE M</h1>
       
       <div className="bg-surface border border-border rounded-xl p-8 mb-8 flex flex-col md:flex-row gap-8 items-center">
-        <div className="w-32 h-32 overflow-hidden shrink-0 flex items-center justify-center">
+        <div className="w-32 h-32 overflow-hidden shrink-0 flex items-center justify-center rounded-full bg-black/20 border-4 border-border">
           <img src="/about-logo.png" alt="CORE M Logo" className="w-full h-full object-contain" />
         </div>
         <div>

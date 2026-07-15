@@ -92,6 +92,15 @@ export function PreviewWindow() {
       if (!state.playhead.isPlaying && currentHash === lastRenderedHash) {
         return;
       }
+      
+      // Throttle rendering when paused/scrubbing to ~30fps max to avoid getting stuck
+      const now = performance.now();
+      const lastRenderTime = (window as any).__lastRenderTime || 0;
+      if (!state.playhead.isPlaying && now - lastRenderTime < 33) {
+        return;
+      }
+      (window as any).__lastRenderTime = now;
+      
       lastRenderedHash = currentHash;
 
       if (workerRef.current) {
@@ -283,7 +292,7 @@ export function PreviewWindow() {
         
         Promise.all(fetchFramePromises).then(resolvedLayers => {
            // Debounce loading indicator — only show after 400ms of sustained buffering
-           if (anyLoading) {
+           if (anyLoading && useTimelineStore.getState().playhead.isPlaying) {
              if (!loadingTimerRef.current) {
                loadingTimerRef.current = setTimeout(() => {
                  setIsLoading(true);
@@ -301,9 +310,16 @@ export function PreviewWindow() {
            setIsError(resolvedLayers.some(l => l.isError));
            if (workerRef.current) {
              const activeSeq = useTimelineStore.getState().sequences[useTimelineStore.getState().activeSequenceId!];
+             let qScale = 1.0;
+             switch(qualityRef.current) {
+               case '360': qScale = 0.25; break;
+               case '480': qScale = 0.5; break;
+               case '720': qScale = 0.75; break;
+               case '2160': qScale = 2.0; break;
+             }
              workerRef.current.postMessage({
                type: 'RENDER',
-               payload: { layers: resolvedLayers, requestScopes: true, qualityScale: qualityRef.current, projectWidth: activeSeq?.width || 1920, projectHeight: activeSeq?.height || 1080 }
+               payload: { layers: resolvedLayers, requestScopes: true, qualityScale: qScale, projectWidth: activeSeq?.width || 1920, projectHeight: activeSeq?.height || 1080 }
              }, resolvedLayers.map(l => l.source).filter(Boolean));
            }
            isFetching = false;
@@ -521,8 +537,13 @@ export function PreviewWindow() {
         <div className="flex items-center gap-2 min-w-0">
           <select 
             value={previewQuality}
-            onChange={e => setPreviewQuality(e.target.value)}
-            className="bg-transparent text-[11px] text-foreground/60 outline-none border border-border/50 rounded px-1.5 py-0.5"
+            onChange={e => {
+              setPreviewQuality(e.target.value);
+              // Force render trigger to apply quality instantly
+              const frame = useTimelineStore.getState().playhead.currentFrame;
+              useTimelineStore.setState(s => ({ playhead: { ...s.playhead, currentFrame: frame } }));
+            }}
+            className="bg-surface text-[11px] text-foreground outline-none border border-border/50 rounded px-1.5 py-0.5"
           >
             <option value="auto">Auto (Fit)</option>
             <option value="360">360p</option>

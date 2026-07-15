@@ -93,7 +93,7 @@ export function CommentPanel({ projectId }: { projectId: string }) {
                 onChange={e => setReplyText(s => ({ ...s, [c.id]: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && handleReply(c.id)}
                 placeholder="Reply..."
-                className="flex-1 bg-transparent text-[11px] outline-none"
+                className="flex-1 bg-transparent text-[11px] text-foreground outline-none"
               />
               <button
                 onClick={() => handleReply(c.id)}
@@ -125,7 +125,7 @@ export function CommentPanel({ projectId }: { projectId: string }) {
             onChange={e => setNewComment(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAddComment()}
             placeholder="Type a comment..."
-            className="flex-1 bg-transparent text-xs outline-none"
+            className="flex-1 bg-transparent text-xs text-foreground outline-none"
           />
           <button
             onClick={handleAddComment}

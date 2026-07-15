@@ -1,5 +1,19 @@
 import { create } from 'zustand';
+import { persist, StateStorage, createJSONStorage } from 'zustand/middleware';
+import { get, set, del } from 'idb-keyval';
 import type { Sequence, Track, Clip, ToolType, SelectionState, HistoryAction, PlayheadState } from './models';
+
+const idbStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return (await get(name)) || null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    await set(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await del(name);
+  },
+};
 
 interface ClipboardState {
   clips: Clip[];
@@ -91,7 +105,9 @@ const pushHistory = (state: TimelineState, label: string) => {
   return { past: [...state.past, action], future: [] };
 };
 
-export const useTimelineStore = create<TimelineState>((set, get) => ({
+export const useTimelineStore = create<TimelineState>()(
+  persist(
+    (set, get) => ({
   sequences: {
     'seq_1': { id: 'seq_1', projectId: 'proj_1', name: 'Main Timeline', duration: 10000, timebase: { fps: 30 }, width: 1920, height: 1080, trackIds: ['v1', 'a1'], markers: [] }
   },
@@ -531,12 +547,22 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const seq = state.sequences[state.activeSequenceId || ''];
     if (!seq) return state;
     
-    const id = `${type[0]}${crypto.randomUUID().substring(0, 4)}`;
+    // Auto-calculate track number and ID prefix
+    const existingTracksOfType = Object.values(state.tracks).filter(t => t.sequenceId === seq.id && (t.type === type || (type === 'adjustment' && t.type === 'effect')));
+    let typeInitial = 'V';
+    if (type === 'audio') typeInitial = 'A';
+    if (type === 'adjustment' || type === 'effect') typeInitial = 'E';
+    if (type === 'transition') typeInitial = 'T'; // Just in case we support discrete transition tracks later
+    
+    const trackNumber = existingTracksOfType.length + 1;
+    const computedName = `${typeInitial}${trackNumber}`;
+    const id = `${typeInitial.toLowerCase()}${Date.now()}`;
+
     const newTrack: Track = {
       id,
       sequenceId: seq.id,
       type,
-      name: name || `${type.charAt(0).toUpperCase() + type.slice(1)} Track`,
+      name: name || computedName,
       index: seq.trackIds.length,
       locked: false,
       hidden: false,
@@ -630,4 +656,15 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       future: state.future.slice(1)
     };
   })
-}));
+}),
+  {
+    name: 'corem-timeline-storage',
+    storage: createJSONStorage(() => idbStorage),
+    partialize: (state) => ({
+      sequences: state.sequences,
+      tracks: state.tracks,
+      clips: state.clips,
+      activeSequenceId: state.activeSequenceId,
+    }),
+  }
+));

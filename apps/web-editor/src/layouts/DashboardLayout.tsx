@@ -15,7 +15,7 @@ export function DashboardLayout() {
       {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-surface flex flex-col">
         <div className="p-4 border-b border-border flex items-center justify-center">
-          <img src="/logo.png" alt="CORE M" className="h-12 object-contain" />
+          <img src="/logo.png" alt="CORE M" className="h-20 object-contain" />
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <Link to="/dashboard/projects" className="block px-4 py-2 rounded-md hover:bg-surface-hover">Projects</Link>

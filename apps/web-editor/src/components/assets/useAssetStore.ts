@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Asset, AssetCollection, DownloadJob, AssetType } from './assetTypes';
 import { BUILT_IN_ASSETS } from './assetTypes';
+import { set as idbSet, get as idbGet, del as idbDel } from 'idb-keyval';
 
 interface AssetStore {
   assets:      Record<string, Asset>;
@@ -17,6 +18,7 @@ interface AssetStore {
   markUsed:       (id: string) => void;
   addLocalAsset:  (file: File) => Promise<Asset>;
   relinkAsset:    (id: string, newUrl: string, isProxy?: boolean) => void;
+  initLocalAssets: () => Promise<void>;
 
   // Collection actions
   createCollection: (name: string, parentId?: string) => string;
@@ -63,6 +65,11 @@ export const useAssetStore = create<AssetStore>()(
           import('@corem/playback').then(({ MediaPool }) => {
             MediaPool.release(id);
           });
+          
+          // Remove from IndexedDB if local
+          if (asset.isLocal) {
+            idbDel(id).catch(console.error);
+          }
         }
         const { [id]: _, ...rest } = s.assets;
         return { assets: rest };
@@ -121,8 +128,40 @@ export const useAssetStore = create<AssetStore>()(
           isFavorite: false, isLocal: true, isDownloaded: true,
           addedAt: Date.now(),
         };
+        
+        // Save to IndexedDB asynchronously
+        idbSet(id, file).catch(console.error);
+        
         set(s => ({ assets: { ...s.assets, [id]: asset } }));
         return asset;
+      },
+
+      initLocalAssets: async () => {
+        const state = get();
+        const updates: Record<string, Asset> = {};
+        let hasChanges = false;
+        
+        for (const [id, asset] of Object.entries(state.assets)) {
+          if (asset.isLocal) {
+            try {
+              const file = await idbGet<File>(id);
+              if (file) {
+                const url = URL.createObjectURL(file);
+                updates[id] = { ...asset, sourceUrl: url, previewUrl: url };
+                hasChanges = true;
+              } else {
+                updates[id] = { ...asset, sourceUrl: undefined, previewUrl: undefined, tags: ['local', 'error'] };
+                hasChanges = true;
+              }
+            } catch (err) {
+              console.warn(`Failed to restore local asset ${id}`, err);
+            }
+          }
+        }
+        
+        if (hasChanges) {
+          set(s => ({ assets: { ...s.assets, ...updates } }));
+        }
       },
 
       relinkAsset: (id, newUrl, isProxy) => set(s => {

@@ -123,13 +123,32 @@ export function TimelineContainer() {
         if (availableTracks.length > 0) {
           targetTrackId = availableTracks[0].id;
         } else {
-          // Auto-create the correct track type if none exists
-          const newTrackId = isAudio ? `a${Date.now()}` : `v${Date.now()}`;
-          addTrack(isAudio ? 'audio' : 'video');
-          // After adding, get the newly created track
+          addTrack(targetType as any);
           const updated = useTimelineStore.getState().tracks;
           const newTrack = Object.values(updated).find(t => t.type === targetType && !allTracks.find(ot => ot.id === t.id));
           targetTrackId = newTrack?.id || (isAudio ? 'a1' : 'v1');
+        }
+      }
+
+      // Overlap detection & Auto Track Creation
+      const isOccupied = (tId: string) => {
+        const t = tracks[tId];
+        if (!t) return false;
+        return t.clipIds.some(cId => {
+          const c = clips[cId];
+          return c && (frame < c.start + c.duration && frame + durationFrames > c.start);
+        });
+      };
+
+      if (targetTrackId && isOccupied(targetTrackId)) {
+        const emptyTrack = allTracks.filter(t => t.type === targetType).find(t => !isOccupied(t.id));
+        if (emptyTrack) {
+          targetTrackId = emptyTrack.id;
+        } else {
+          addTrack(targetType as any);
+          const updated = useTimelineStore.getState().tracks;
+          const newTrack = Object.values(updated).find(t => t.type === targetType && !allTracks.find(ot => ot.id === t.id));
+          targetTrackId = newTrack?.id || targetTrackId;
         }
       }
 

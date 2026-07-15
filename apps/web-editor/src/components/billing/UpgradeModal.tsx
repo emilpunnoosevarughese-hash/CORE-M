@@ -67,7 +67,9 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-border bg-black/20">
           <div className="flex items-center gap-3">
-            <img src="/about-logo.png" alt="CORE M" className="h-8 object-contain" />
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-black flex items-center justify-center">
+              <img src="/about-logo.png" alt="CORE M" className="w-full h-full object-cover" />
+            </div>
             <h2 className="text-xl font-bold">Upgrade to Pro</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-foreground/60 hover:text-foreground">

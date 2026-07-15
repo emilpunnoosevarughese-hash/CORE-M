@@ -247,6 +247,18 @@ export const ClipNode = React.memo(function ClipNode({ clip, sequence }: ClipNod
       {/* Waveform Renderer */}
       <WaveformCanvas clipId={clip.id} assetId={clip.assetId} duration={clip.duration} />
 
+      {/* Keyframe Markers */}
+      {clip.animations && Object.values(clip.animations).map(track => (
+        track.keyframes.map((kf: any) => (
+          <div 
+            key={kf.id}
+            className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-amber-400 rotate-45 z-40 border border-black shadow-sm"
+            style={{ left: kf.time * zoomScale - 4 }}
+            title={`Keyframe: ${track.propertyId}`}
+          />
+        ))
+      ))}
+
       {/* Left Trim Handle */}
       <div 
         onPointerDown={handleLeftTrimPointerDown}
