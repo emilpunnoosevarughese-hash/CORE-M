@@ -49,23 +49,28 @@ export const usePresenceStore = create<PresenceStore>((set) => {
         Object.entries(me).filter(([, v]) => v !== undefined && v !== null || typeof v === 'number' || typeof v === 'string' && v.length > 0)
       );
       
-      firebaseSet(myPresenceRef, meClean);
-      onDisconnect(myPresenceRef).remove();
+      // Write presence — silently ignore permission_denied (user not authenticated or rules not set)
+      firebaseSet(myPresenceRef, meClean).catch(() => {});
+      onDisconnect(myPresenceRef).remove().catch(() => {});
 
-      // Listen for others
-      onValue(projectPresenceRef, (snapshot) => {
-        const val = snapshot.val();
-        if (val) {
-          set({ collaborators: val });
-        } else {
-          set({ collaborators: {} });
-        }
-      });
+      // Listen for others — silently ignore permission errors
+      try {
+        onValue(projectPresenceRef, (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            set({ collaborators: val });
+          } else {
+            set({ collaborators: {} });
+          }
+        });
+      } catch (e) {
+        // Permission denied — collaboration features unavailable, silently degrade
+      }
     },
 
-    leaveProject: (projectId: string) => {
+    leaveProject: (_projectId: string) => {
       if (currentProjectRef) {
-        remove(currentProjectRef);
+        remove(currentProjectRef).catch(() => {});
         currentProjectRef = null;
       }
       set({ collaborators: {} });

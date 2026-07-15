@@ -111,7 +111,9 @@ export class MediaProcessor {
       const audio = document.createElement('audio');
       
       audio.onloadedmetadata = () => {
+        const duration = audio.duration;
         // Run progressive waveform extraction asynchronously
+        // NOTE: revoke the blob URL only AFTER the fetch completes, not before
         setTimeout(async () => {
           try {
             const { WaveformGenerator } = await import('@corem/audio');
@@ -124,12 +126,14 @@ export class MediaProcessor {
             CacheManager.set(`waveform-${file.name}`, peaks);
           } catch(e) {
             console.warn('Progressive waveform extraction failed:', e);
+          } finally {
+            // Revoke only after we're done with the blob URL
+            URL.revokeObjectURL(url);
           }
         }, 0);
 
-        URL.revokeObjectURL(url);
         resolve({
-          duration: audio.duration,
+          duration,
           width: 0,
           height: 0,
           fps: 0,
