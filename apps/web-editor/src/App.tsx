@@ -64,9 +64,14 @@ function App() {
   // Theme initialization — respect saved preference, default to dark
   useEffect(() => {
     const saved = localStorage.getItem('corem_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = saved ? saved === 'dark' : (prefersDark || true); // default dark
-    document.documentElement.classList.toggle('dark', isDark);
+    const isDark = saved ? saved === 'dark' : true;
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
 
   useEffect(() => {
