@@ -4,6 +4,8 @@ import { useAuthStore, authProviders } from '@corem/cloud';
 import { CloudProjectsPanel } from '../components/cloud/CloudProjectsPanel';
 import { DashboardSettings } from '../pages/DashboardSettings';
 import { DashboardProfile } from '../pages/DashboardProfile';
+import { DashboardAbout } from '../pages/DashboardAbout';
+import { DashboardShowcase } from '../pages/DashboardShowcase';
 
 export function DashboardLayout() {
   const { user } = useAuthStore();
@@ -17,8 +19,10 @@ export function DashboardLayout() {
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <Link to="/dashboard/projects" className="block px-4 py-2 rounded-md hover:bg-surface-hover">Projects</Link>
+          <Link to="/dashboard/showcase" className="block px-4 py-2 rounded-md hover:bg-surface-hover">Showcase</Link>
           <Link to="/dashboard/settings" className="block px-4 py-2 rounded-md hover:bg-surface-hover">Settings</Link>
           <Link to="/dashboard/profile" className="block px-4 py-2 rounded-md hover:bg-surface-hover">Profile</Link>
+          <Link to="/dashboard/about" className="block px-4 py-2 rounded-md hover:bg-surface-hover text-primary font-medium">About</Link>
         </nav>
         <div className="p-4 border-t border-border">
           {user ? (
@@ -51,8 +55,10 @@ export function DashboardLayout() {
         <Routes>
           <Route path="/" element={<CloudProjectsPanel />} />
           <Route path="/projects" element={<CloudProjectsPanel />} />
+          <Route path="/showcase" element={<DashboardShowcase />} />
           <Route path="/settings" element={<DashboardSettings />} />
           <Route path="/profile" element={<DashboardProfile />} />
+          <Route path="/about" element={<DashboardAbout />} />
         </Routes>
       </main>
     </div>

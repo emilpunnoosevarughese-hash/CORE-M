@@ -1,9 +1,22 @@
 import React from 'react';
-import { useAuthStore } from '@corem/cloud';
-import { User, Mail, Shield, HardDrive, Key } from 'lucide-react';
+import { useAuthStore, useProjectStore } from '@corem/cloud';
+import { User, Mail, Shield, HardDrive, Key, Copy, Check } from 'lucide-react';
+import { useState } from 'react';
+import { UpgradeModal } from '../components/billing/UpgradeModal';
 
 export function DashboardProfile() {
   const { user } = useAuthStore();
+  const { projects } = useProjectStore();
+  const [copied, setCopied] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  const handleCopyId = () => {
+    if (user?.uid) {
+      navigator.clipboard.writeText(user.uid);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   if (!user) {
     return <div className="p-8 text-foreground/50">Please sign in to view your profile.</div>;
@@ -33,6 +46,13 @@ export function DashboardProfile() {
             <div className="flex items-center gap-2 text-foreground/60">
               <Shield size={14} />
               <span className="font-mono text-xs">{user.uid}</span>
+              <button 
+                onClick={handleCopyId}
+                className="ml-2 p-1 hover:bg-white/10 rounded transition-colors text-foreground/40 hover:text-foreground"
+                title="Copy ID to share with teammates"
+              >
+                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+              </button>
             </div>
           </div>
         </div>
@@ -48,10 +68,10 @@ export function DashboardProfile() {
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-foreground/70">Projects</span>
-                <span>2 / 5 allowed</span>
+                <span>{projects.length} / 10 allowed</span>
               </div>
               <div className="h-2 bg-background rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-[40%]"></div>
+                <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(100, (projects.length / 10) * 100)}%` }}></div>
               </div>
             </div>
             <div>
@@ -77,13 +97,21 @@ export function DashboardProfile() {
                 <div className="font-medium">Free Tier</div>
                 <div className="text-xs text-foreground/50">Basic features & 720p export</div>
               </div>
-              <button className="px-3 py-1.5 bg-primary/10 text-primary rounded text-xs font-semibold hover:bg-primary/20 transition-colors">
+              <button 
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="px-3 py-1.5 bg-primary/10 text-primary rounded text-xs font-semibold hover:bg-primary/20 transition-colors"
+              >
                 Upgrade Pro
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      <UpgradeModal 
+        isOpen={isUpgradeModalOpen} 
+        onClose={() => setIsUpgradeModalOpen(false)} 
+      />
     </div>
   );
 }

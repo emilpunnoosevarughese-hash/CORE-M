@@ -44,6 +44,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     if (!user) throw new Error('Not logged in');
     
     const id = `proj_${Date.now()}`;
+    
+    // Enforce 10 project limit for free tier
+    const currentProjects = get().projects;
+    if (currentProjects.length >= 10) {
+      // In a full implementation, we'd check if user is Pro
+      throw new Error('Project limit reached. Please upgrade to Pro to create more projects.');
+    }
+
     const project: CloudProject = {
       id,
       title,
