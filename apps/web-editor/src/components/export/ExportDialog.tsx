@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Download, Youtube, Instagram, MonitorPlay, Settings2, FileAudio, FileImage, LayoutGrid } from 'lucide-react';
 import { ExportEngine, RenderQueue, ExportPresetManager, JobManager, ExportFormat, VideoCodec, AudioCodec } from '@corem/export';
+import { useTimelineStore } from '@corem/timeline';
+import { useAssetStore } from '../assets/useAssetStore';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -264,12 +266,50 @@ export function ExportDialog({ isOpen, onClose, sequenceId }: ExportDialogProps)
           <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-surface-hover text-sm font-medium transition-colors">
             Cancel
           </button>
+          
+          <button 
+            onClick={() => {
+              // Export state for Remotion
+              const state = useTimelineStore.getState();
+              const assets = useAssetStore.getState().assets;
+              
+              const sequence = state.sequences[sequenceId];
+              const tracks = sequence.trackIds.map((id: string) => state.tracks[id]);
+              
+              const props = {
+                id: sequence.id,
+                name: sequence.name,
+                width: sequence.width,
+                height: sequence.height,
+                fps: sequence.timebase.fps,
+                duration: sequence.duration,
+                tracks,
+                clips: state.clips,
+                assets
+              };
+              
+              const data = JSON.stringify(props, null, 2);
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'remotion-props.json';
+              a.click();
+              
+              alert('Saved remotion-props.json! Run this in the terminal:\\n\\ncd apps/remotion-renderer\\nnpx remotion render src/Root.tsx CoreMSequence ../../out.mp4 --props=../../remotion-props.json');
+            }}
+            className="flex items-center gap-2 px-6 py-2 bg-indigo-500/20 text-indigo-400 border border-indigo-500/50 rounded-md text-sm font-semibold hover:bg-indigo-500/30 transition-colors"
+          >
+            <Download size={16} />
+            Remotion (JSON)
+          </button>
+
           <button 
             onClick={handleExport}
             className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
           >
-            <Download size={16} />
-            Render Background Job
+            <MonitorPlay size={16} />
+            Render WebGL Job
           </button>
         </div>
 
